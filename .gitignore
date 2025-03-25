@@ -1,0 +1,28 @@
+*.iml
+/local.properties
+
+# Android Studio specific
+.idea/
+build/
+captures/
+.externalNativeBuild/
+.cxx/
+local.properties
+
+# Gradle cache and temporary files (system-specific, should be ignored)
+.gradle/
+
+# Other IDEs and macOS
+.DS_Store
+
+# Build outputs
+*.apk
+*.aab
+
+# Logs
+*.log
+
+# Older Android build directories (optional, if applicable)
+bin/
+gen/
+obj/
