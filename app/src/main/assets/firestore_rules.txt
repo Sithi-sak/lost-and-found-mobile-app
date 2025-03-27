@@ -1,0 +1,48 @@
+// Firestore Rules for Lost and Found App
+// Copy these rules to your Firebase Console -> Firestore Database -> Rules
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // User authentication helper function
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Function to check if user owns the document
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    // Lost Items collection
+    match /lost_items/{itemId} {
+      // Anyone can read lost items
+      allow read: if true;
+      
+      // Only authenticated users can create items
+      allow create: if isAuthenticated() && 
+                     request.resource.data.userId == request.auth.uid;
+      
+      // Only the owner can update or delete their items
+      allow update, delete: if isOwner(resource.data.userId);
+    }
+    
+    // Counter document for numeric IDs
+    match /counters/{counterId} {
+      // Only authenticated users can read counter
+      allow read: if isAuthenticated();
+      
+      // Only server-side operations can update counter
+      allow write: if false;
+    }
+    
+    // User profiles (if implemented)
+    match /users/{userId} {
+      // Users can read other users' public profiles
+      allow read: if true;
+      
+      // Users can only write to their own profile
+      allow write: if isOwner(userId);
+    }
+  }
+} 
