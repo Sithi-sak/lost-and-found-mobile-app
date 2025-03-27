@@ -1,0 +1,38 @@
+// Firebase Storage Rules for Lost and Found App
+// Copy these rules to your Firebase Console -> Storage -> Rules
+
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isValidContentType() {
+      return request.resource.contentType.matches('image/.*');
+    }
+    
+    function isValidFileSize() {
+      return request.resource.size <= 10 * 1024 * 1024; // 10MB limit
+    }
+    
+    // Lost item images
+    match /lost_item_images/{userId}/{filename} {
+      // Anyone can view images
+      allow read: if true;
+      
+      // Only authenticated users can upload their own images
+      allow create: if isAuthenticated() && 
+                      request.auth.uid == userId && 
+                      isValidContentType() && 
+                      isValidFileSize();
+      
+      // Only image owners can delete their images
+      allow delete: if isAuthenticated() && request.auth.uid == userId;
+      
+      // No updates to existing images
+      allow update: if false;
+    }
+  }
+} 
