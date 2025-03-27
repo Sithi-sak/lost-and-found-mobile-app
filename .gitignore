@@ -26,3 +26,5 @@ local.properties
 bin/
 gen/
 obj/
+
+google-services.json
