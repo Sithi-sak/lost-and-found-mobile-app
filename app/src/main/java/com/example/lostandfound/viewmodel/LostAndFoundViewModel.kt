@@ -7,14 +7,13 @@ import androidx.lifecycle.viewModelScope
 import com.example.lostandfound.firebase.FirebaseManager
 import com.example.lostandfound.model.LostItem
 import com.google.firebase.auth.FirebaseUser
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.launch
 
 class LostAndFoundViewModel : ViewModel() {
     
