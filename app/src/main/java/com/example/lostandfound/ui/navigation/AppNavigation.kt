@@ -6,7 +6,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.automirrored.outlined.List
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.outlined.Home
+import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material.icons.automirrored.filled.Chat
+import androidx.compose.material.icons.automirrored.outlined.Chat
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
@@ -27,10 +31,13 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.lostandfound.ui.screens.BrowseScreen
+import com.example.lostandfound.ui.screens.ChatListScreen
+import com.example.lostandfound.ui.screens.ChatScreen
 import com.example.lostandfound.ui.screens.DetailScreen
 import com.example.lostandfound.ui.screens.HistoryScreen
 import com.example.lostandfound.ui.screens.LoginScreen
 import com.example.lostandfound.ui.screens.PostScreen
+import com.example.lostandfound.ui.screens.ProfileScreen
 import com.example.lostandfound.ui.screens.SettingsScreen
 import com.example.lostandfound.ui.screens.SignupScreen
 import com.example.lostandfound.viewmodel.AuthState
@@ -44,6 +51,9 @@ sealed class Screen(val route: String) {
     object History : Screen("history")
     object Settings : Screen("settings")
     object Detail : Screen("detail/{itemId}")
+    object Profile : Screen("profile")
+    object Chat : Screen("chat/{chatId}")
+    object ChatList : Screen("chats")
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -183,13 +193,66 @@ fun AppNavigation(viewModel: LostAndFoundViewModel) {
         ) { backStackEntry ->
             val itemId = backStackEntry.arguments?.getString("itemId") ?: ""
             
-            // We'll fetch the item directly from the database
             DetailScreen(
                 itemId = itemId,
                 viewModel = viewModel,
                 onNavigateBack = { navController.popBackStack() },
-                onDeleteSuccess = { navController.popBackStack() }
+                onDeleteSuccess = { navController.popBackStack() },
+                onNavigateToChat = { chatId ->
+                    navController.navigate(Screen.Chat.route.replace("{chatId}", chatId))
+                }
             )
+        }
+
+        composable(Screen.Profile.route) {
+            MainScaffold(
+                navController = navController,
+                viewModel = viewModel,
+                currentRoute = Screen.Profile.route
+            ) { modifier ->
+                ProfileScreen(
+                    modifier = modifier,
+                    viewModel = viewModel,
+                    onNavigateToHistory = { navController.navigate(Screen.History.route) },
+                    onNavigateToSettings = { navController.navigate(Screen.Settings.route) },
+                    onLogout = {
+                        viewModel.signOut()
+                        navController.navigate(Screen.Login.route) {
+                            popUpTo(navController.graph.findStartDestination().id) {
+                                inclusive = true
+                            }
+                        }
+                    }
+                )
+            }
+        }
+
+        composable(
+            route = Screen.Chat.route,
+            arguments = listOf(navArgument("chatId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val chatId = backStackEntry.arguments?.getString("chatId") ?: ""
+            ChatScreen(
+                chatId = chatId,
+                viewModel = viewModel,
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(Screen.ChatList.route) {
+            MainScaffold(
+                navController = navController,
+                viewModel = viewModel,
+                currentRoute = Screen.ChatList.route
+            ) { modifier ->
+                ChatListScreen(
+                    modifier = modifier,
+                    viewModel = viewModel,
+                    onNavigateToChat = { chatId ->
+                        navController.navigate(Screen.Chat.route.replace("{chatId}", chatId))
+                    }
+                )
+            }
         }
     }
 }
@@ -204,16 +267,28 @@ fun MainScaffold(
 ) {
     val items = listOf(
         NavigationItem(
-            title = "Browse",
+            route = Screen.Browse.route,
             selectedIcon = Icons.Filled.Home,
             unselectedIcon = Icons.Outlined.Home,
-            route = Screen.Browse.route
+            label = "Browse"
         ),
         NavigationItem(
-            title = "My Posts",
+            route = Screen.History.route,
             selectedIcon = Icons.AutoMirrored.Filled.List,
             unselectedIcon = Icons.AutoMirrored.Outlined.List,
-            route = Screen.History.route
+            label = "My Posts"
+        ),
+        NavigationItem(
+            route = Screen.ChatList.route,
+            selectedIcon = Icons.AutoMirrored.Filled.Chat,
+            unselectedIcon = Icons.AutoMirrored.Outlined.Chat,
+            label = "Chats"
+        ),
+        NavigationItem(
+            route = Screen.Profile.route,
+            selectedIcon = Icons.Filled.Person,
+            unselectedIcon = Icons.Outlined.Person,
+            label = "Profile"
         )
     )
     
@@ -227,52 +302,37 @@ fun MainScaffold(
                     NavigationBarItem(
                         icon = { 
                             Icon(
-                                imageVector = if (currentDestination?.route == item.route) item.selectedIcon else item.unselectedIcon,
-                                contentDescription = item.title
+                                imageVector = if (currentDestination?.hierarchy?.any { it.route == item.route } == true) {
+                                    item.selectedIcon
+                                } else {
+                                    item.unselectedIcon
+                                },
+                                contentDescription = item.label
                             )
                         },
-                        label = { Text(item.title) },
+                        label = { Text(item.label) },
                         selected = currentDestination?.hierarchy?.any { it.route == item.route } == true,
                         onClick = {
-                            if (currentDestination?.route != item.route) {
-                                try {
-                                    if (item.route == Screen.History.route) {
-                                        // Check auth status before navigating to History
-                                        val isAuthenticated = viewModel.authState.value is AuthState.Authenticated
-                                        if (isAuthenticated) {
-                                            // Use direct navigation without complex options for History
-                                            navController.navigate(item.route)
-                                        } else {
-                                            // If not authenticated, show a toast or handle gracefully
-                                            Log.w("AppNavigation", "Cannot navigate to History - user not authenticated")
-                                        }
-                                    } else {
-                                        navController.navigate(item.route) {
-                                            popUpTo(navController.graph.findStartDestination().id) {
-                                                saveState = true
-                                            }
-                                            launchSingleTop = true
-                                            restoreState = true
-                                        }
-                                    }
-                                } catch (e: Exception) {
-                                    Log.e("AppNavigation", "Navigation error", e)
+                            navController.navigate(item.route) {
+                                popUpTo(navController.graph.findStartDestination().id) {
+                                    saveState = true
                                 }
+                                launchSingleTop = true
+                                restoreState = true
                             }
                         }
                     )
                 }
             }
         }
-    ) { padding ->
-        // Apply the padding to the content
-        content(Modifier.padding(padding))
+    ) { innerPadding ->
+        content(Modifier.padding(innerPadding))
     }
 }
 
 data class NavigationItem(
-    val title: String,
+    val route: String,
     val selectedIcon: androidx.compose.ui.graphics.vector.ImageVector,
     val unselectedIcon: androidx.compose.ui.graphics.vector.ImageVector,
-    val route: String
+    val label: String
 ) 

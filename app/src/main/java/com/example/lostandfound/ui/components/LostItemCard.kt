@@ -1,5 +1,7 @@
 package com.example.lostandfound.ui.components
 
+import android.graphics.BitmapFactory
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -17,12 +19,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import coil.compose.AsyncImage
-import coil.request.ImageRequest
+import android.util.Base64
 import com.example.lostandfound.model.LostItem
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -50,13 +52,12 @@ fun LostItemCard(
             verticalAlignment = Alignment.CenterVertically
         ) {
             // Display thumbnail if image is available
-            if (lostItem.imageUrl.isNotEmpty()) {
-                AsyncImage(
-                    model = ImageRequest.Builder(context)
-                        .data(lostItem.imageUrl)
-                        .crossfade(true)
-                        .build(),
-                    contentDescription = "Item image",
+            if (lostItem.imageBase64.isNotEmpty()) {
+                val imageBytes = Base64.decode(lostItem.imageBase64, Base64.DEFAULT)
+                val bitmap = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
+                Image(
+                    bitmap = bitmap.asImageBitmap(),
+                    contentDescription = "Lost item image",
                     modifier = Modifier
                         .size(70.dp)
                         .clip(MaterialTheme.shapes.small),

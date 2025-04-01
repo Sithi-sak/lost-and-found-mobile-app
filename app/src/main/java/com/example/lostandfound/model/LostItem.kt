@@ -12,8 +12,9 @@ data class LostItem(
     val contact: String = "",
     val userId: String = "",
     val userEmail: String = "",
+    val username: String = "",
     val timestamp: Long = System.currentTimeMillis(),
-    val imageUrl: String = "",
+    val imageBase64: String = "",
     val numericId: Long = 0 // Numeric ID for alternate indexing
 ) {
     @Exclude
@@ -24,8 +25,9 @@ data class LostItem(
             "contact" to contact,
             "userId" to userId,
             "userEmail" to userEmail,
+            "username" to username,
             "timestamp" to timestamp,
-            "imageUrl" to imageUrl,
+            "imageBase64" to imageBase64,
             "numericId" to numericId
         )
     }

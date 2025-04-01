@@ -1,8 +1,10 @@
 package com.example.lostandfound.ui.screens
 
 import android.content.Intent
+import android.graphics.BitmapFactory
 import android.net.Uri
 import android.widget.Toast
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -46,8 +49,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
@@ -58,6 +63,8 @@ import com.example.lostandfound.viewmodel.LostAndFoundViewModel
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import android.util.Base64
+import android.graphics.Bitmap
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -65,7 +72,8 @@ fun DetailScreen(
     itemId: String,
     viewModel: LostAndFoundViewModel,
     onNavigateBack: () -> Unit,
-    onDeleteSuccess: () -> Unit
+    onDeleteSuccess: () -> Unit,
+    onNavigateToChat: (String) -> Unit
 ) {
     val context = LocalContext.current
     val authState by viewModel.authState.collectAsState()
@@ -172,7 +180,9 @@ fun DetailScreen(
                     
                     ItemDetailContent(
                         lostItem = lostItem,
-                        isUsersOwnItem = isUsersOwnItem
+                        isUsersOwnItem = isUsersOwnItem,
+                        viewModel = viewModel,
+                        onNavigateToChat = onNavigateToChat
                     )
                 }
                 else -> {
@@ -186,7 +196,9 @@ fun DetailScreen(
 @Composable
 private fun ItemDetailContent(
     lostItem: LostItem,
-    isUsersOwnItem: Boolean
+    isUsersOwnItem: Boolean,
+    viewModel: LostAndFoundViewModel,
+    onNavigateToChat: (String) -> Unit
 ) {
     val context = LocalContext.current
     
@@ -213,25 +225,35 @@ private fun ItemDetailContent(
                 
                 Spacer(modifier = Modifier.height(8.dp))
                 
-                Text(
-                    text = "Posted on ${formatDate(lostItem.timestamp)}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.outline
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Posted by ${lostItem.username}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    
+                    Text(
+                        text = formatDate(lostItem.timestamp),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.outline
+                    )
+                }
                 
                 // Display image if available
-                if (lostItem.imageUrl.isNotEmpty()) {
-                    Spacer(modifier = Modifier.height(16.dp))
+                if (lostItem.imageBase64.isNotEmpty()) {
+                    val imageBytes = Base64.decode(lostItem.imageBase64, Base64.DEFAULT)
+                    val bitmap = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
                     
-                    AsyncImage(
-                        model = ImageRequest.Builder(context)
-                            .data(lostItem.imageUrl)
-                            .crossfade(true)
-                            .build(),
+                    androidx.compose.foundation.Image(
+                        bitmap = bitmap.asImageBitmap(),
                         contentDescription = "Image of lost item",
                         modifier = Modifier
                             .fillMaxWidth()
-                            .aspectRatio(4/3f)
+                            .height(200.dp)
                             .clip(MaterialTheme.shapes.medium),
                         contentScale = ContentScale.Crop
                     )
@@ -239,7 +261,7 @@ private fun ItemDetailContent(
                 
                 Spacer(modifier = Modifier.height(16.dp))
                 
-                // Status badge (placeholder for future feature)
+                // Status badge
                 Surface(
                     color = MaterialTheme.colorScheme.primaryContainer,
                     shape = RoundedCornerShape(16.dp),
@@ -268,7 +290,7 @@ private fun ItemDetailContent(
                 
                 Spacer(modifier = Modifier.height(16.dp))
                 
-                // Location section (placeholder for future feature)
+                // Location section
                 Text(
                     text = "Location",
                     style = MaterialTheme.typography.titleMedium
@@ -301,7 +323,7 @@ private fun ItemDetailContent(
                 modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // First row - Call and SMS
+                // First row - Call and Chat
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(16.dp)
@@ -323,72 +345,14 @@ private fun ItemDetailContent(
                         Text("Call")
                     }
                     
-                    OutlinedButton(
-                        onClick = {
-                            val intent = Intent(Intent.ACTION_SENDTO).apply {
-                                data = Uri.parse("smsto:${lostItem.contact}")
-                                putExtra("sms_body", "Hi, I'm contacting about your lost item: ${lostItem.title}")
-                            }
-                            context.startActivity(intent)
-                        },
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.Message,
-                            contentDescription = null,
-                            modifier = Modifier.padding(end = 8.dp)
-                        )
-                        Text("Message")
-                    }
-                }
-                
-                // Second row - Email and Chat
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    // Email button
-                    OutlinedButton(
-                        onClick = {
-                            try {
-                                // Use userEmail if available, otherwise try to use contact
-                                val emailAddress = if (lostItem.userEmail.isNotEmpty()) 
-                                                    lostItem.userEmail 
-                                                  else 
-                                                    lostItem.contact
-                                
-                                val intent = Intent(Intent.ACTION_SENDTO).apply {
-                                    data = Uri.parse("mailto:")
-                                    putExtra(Intent.EXTRA_EMAIL, arrayOf(emailAddress))
-                                    putExtra(Intent.EXTRA_SUBJECT, "About your lost item: ${lostItem.title}")
-                                    putExtra(Intent.EXTRA_TEXT, "Hi, I'm contacting you regarding your lost item listing on the Lost and Found app.")
-                                }
-                                context.startActivity(intent)
-                            } catch (e: Exception) {
-                                // Handle the case where there's no email app
-                                Toast.makeText(context, "No email app found", Toast.LENGTH_SHORT).show()
-                            }
-                        },
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Email,
-                            contentDescription = null,
-                            modifier = Modifier.padding(end = 8.dp)
-                        )
-                        Text("Email")
-                    }
-                    
-                    // In-app Chat button
                     Button(
                         onClick = {
-                            // This would typically navigate to a chat screen
-                            // You can implement this in future updates
-                            Toast.makeText(
-                                context,
-                                "Chat feature coming soon!",
-                                Toast.LENGTH_SHORT
-                            ).show()
+                            viewModel.createOrOpenChat(
+                                otherUserId = lostItem.userId,
+                                itemId = lostItem.id
+                            ) { chatId ->
+                                onNavigateToChat(chatId)
+                            }
                         },
                         modifier = Modifier.weight(1f),
                         colors = ButtonDefaults.buttonColors(
@@ -402,6 +366,36 @@ private fun ItemDetailContent(
                         )
                         Text("Chat")
                     }
+                }
+                
+                // Second row - Email
+                OutlinedButton(
+                    onClick = {
+                        try {
+                            val emailAddress = if (lostItem.userEmail.isNotEmpty()) 
+                                                lostItem.userEmail 
+                                              else 
+                                                lostItem.contact
+                            
+                            val intent = Intent(Intent.ACTION_SENDTO).apply {
+                                data = Uri.parse("mailto:")
+                                putExtra(Intent.EXTRA_EMAIL, arrayOf(emailAddress))
+                                putExtra(Intent.EXTRA_SUBJECT, "About your lost item: ${lostItem.title}")
+                                putExtra(Intent.EXTRA_TEXT, "Hi, I'm contacting you regarding your lost item listing on the Lost and Found app.")
+                            }
+                            context.startActivity(intent)
+                        } catch (e: Exception) {
+                            Toast.makeText(context, "No email app found", Toast.LENGTH_SHORT).show()
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Email,
+                        contentDescription = null,
+                        modifier = Modifier.padding(end = 8.dp)
+                    )
+                    Text("Email")
                 }
             }
         }

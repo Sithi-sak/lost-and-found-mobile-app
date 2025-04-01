@@ -5,7 +5,9 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.lostandfound.firebase.FirebaseManager
+import com.example.lostandfound.model.Chat
 import com.example.lostandfound.model.LostItem
+import com.example.lostandfound.model.Message
 import com.google.firebase.auth.FirebaseUser
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -14,6 +16,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
+import java.io.InputStream
 
 class LostAndFoundViewModel : ViewModel() {
     
@@ -34,6 +37,22 @@ class LostAndFoundViewModel : ViewModel() {
     // Image upload state
     private val _imageUploadState = MutableStateFlow<ImageUploadState>(ImageUploadState.Idle)
     val imageUploadState: StateFlow<ImageUploadState> = _imageUploadState.asStateFlow()
+    
+    // Chat-related state
+    private val _chatState = MutableStateFlow<ChatState>(ChatState.Loading)
+    val chatState: StateFlow<ChatState> = _chatState.asStateFlow()
+
+    private val _chats = MutableStateFlow<List<Chat>>(emptyList())
+    val chats: StateFlow<List<Chat>> = _chats.asStateFlow()
+
+    private val _messages = MutableStateFlow<List<Message>>(emptyList())
+    val messages: StateFlow<List<Message>> = _messages.asStateFlow()
+    
+    private val _postState = MutableStateFlow<PostState>(PostState.Idle)
+    val postState: StateFlow<PostState> = _postState.asStateFlow()
+
+    private val _imageState = MutableStateFlow<ImageState>(ImageState.NoImage)
+    val imageState: StateFlow<ImageState> = _imageState.asStateFlow()
     
     init {
         checkAuthState()
@@ -113,26 +132,29 @@ class LostAndFoundViewModel : ViewModel() {
         }
     }
     
-    fun createLostItem(title: String, description: String, contact: String, imageUrl: String = "") {
-        _formState.value = FormState.Loading
+    fun createLostItem(title: String, description: String, contact: String, imageBase64: String = "") {
         viewModelScope.launch {
-            val lostItem = LostItem(
-                title = title,
-                description = description,
-                contact = contact,
-                timestamp = System.currentTimeMillis(),
-                imageUrl = imageUrl
-            )
-            
-            val result = firebaseManager.addLostItem(lostItem)
-            result.fold(
-                onSuccess = {
-                    _formState.value = FormState.Success("Item posted successfully")
-                },
-                onFailure = { exception ->
-                    _formState.value = FormState.Error(exception.message ?: "Failed to post item")
-                }
-            )
+            _postState.value = PostState.Loading
+            try {
+                val result = firebaseManager.addLostItem(
+                    title = title,
+                    description = description,
+                    contact = contact,
+                    imageBase64 = imageBase64
+                )
+                
+                result.fold(
+                    onSuccess = {
+                        _postState.value = PostState.Success
+                        _imageState.value = ImageState.NoImage // Reset image state
+                    },
+                    onFailure = { e ->
+                        _postState.value = PostState.Error(e.message ?: "Error creating post")
+                    }
+                )
+            } catch (e: Exception) {
+                _postState.value = PostState.Error(e.message ?: "Error creating post")
+            }
         }
     }
     
@@ -176,6 +198,97 @@ class LostAndFoundViewModel : ViewModel() {
     fun resetDetailState() {
         _detailState.value = DetailState.Idle
     }
+
+    fun getChats() {
+        viewModelScope.launch {
+            try {
+                firebaseManager.getChats()
+                    .catch { e ->
+                        _chatState.value = ChatState.Error(e.message ?: "Error fetching chats")
+                    }
+                    .collect { chatsList ->
+                        _chats.value = chatsList
+                        _chatState.value = ChatState.Success
+                    }
+            } catch (e: Exception) {
+                _chatState.value = ChatState.Error(e.message ?: "Error fetching chats")
+            }
+        }
+    }
+
+    fun getChatMessages(chatId: String) {
+        viewModelScope.launch {
+            try {
+                firebaseManager.getChatMessages(chatId)
+                    .catch { e ->
+                        _chatState.value = ChatState.Error(e.message ?: "Error fetching messages")
+                    }
+                    .collect { messagesList ->
+                        _messages.value = messagesList
+                    }
+            } catch (e: Exception) {
+                _chatState.value = ChatState.Error(e.message ?: "Error fetching messages")
+            }
+        }
+    }
+
+    fun sendMessage(chatId: String, content: String) {
+        viewModelScope.launch {
+            try {
+                val result = firebaseManager.sendMessage(chatId, content)
+                result.onFailure { e ->
+                    _chatState.value = ChatState.Error(e.message ?: "Error sending message")
+                }
+            } catch (e: Exception) {
+                _chatState.value = ChatState.Error(e.message ?: "Error sending message")
+            }
+        }
+    }
+
+    fun createOrOpenChat(otherUserId: String, itemId: String, onChatCreated: (String) -> Unit) {
+        viewModelScope.launch {
+            try {
+                val result = firebaseManager.createOrOpenChat(otherUserId, itemId)
+                result.fold(
+                    onSuccess = { chatId ->
+                        onChatCreated(chatId)
+                    },
+                    onFailure = { e ->
+                        _chatState.value = ChatState.Error(e.message ?: "Error creating chat")
+                    }
+                )
+            } catch (e: Exception) {
+                _chatState.value = ChatState.Error(e.message ?: "Error creating chat")
+            }
+        }
+    }
+
+    fun handleImageSelection(inputStream: InputStream) {
+        viewModelScope.launch {
+            _imageState.value = ImageState.Loading
+            try {
+                val result = firebaseManager.convertImageToBase64(inputStream)
+                result.fold(
+                    onSuccess = { base64String ->
+                        _imageState.value = ImageState.Success(base64String)
+                    },
+                    onFailure = { e ->
+                        _imageState.value = ImageState.Error(e.message ?: "Error processing image")
+                    }
+                )
+            } catch (e: Exception) {
+                _imageState.value = ImageState.Error(e.message ?: "Error processing image")
+            }
+        }
+    }
+
+    fun resetImageState() {
+        _imageState.value = ImageState.NoImage
+    }
+
+    fun resetPostState() {
+        _postState.value = PostState.Idle
+    }
 }
 
 sealed class AuthState {
@@ -202,6 +315,26 @@ sealed class DetailState {
 sealed class ImageUploadState {
     object Idle : ImageUploadState()
     object Loading : ImageUploadState()
-    data class Success(val imageUrl: String) : ImageUploadState()
+    data class Success(val imageBase64: String) : ImageUploadState()
     data class Error(val message: String) : ImageUploadState()
+}
+
+sealed class ChatState {
+    object Loading : ChatState()
+    object Success : ChatState()
+    data class Error(val message: String) : ChatState()
+}
+
+sealed class ImageState {
+    object NoImage : ImageState()
+    object Loading : ImageState()
+    data class Success(val base64String: String) : ImageState()
+    data class Error(val message: String) : ImageState()
+}
+
+sealed class PostState {
+    object Idle : PostState()
+    object Loading : PostState()
+    object Success : PostState()
+    data class Error(val message: String) : PostState()
 } 

@@ -1,10 +1,16 @@
 package com.example.lostandfound.ui.screens
 
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.net.Uri
+import android.util.Base64
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -13,23 +19,24 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.AddPhotoAlternate
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -43,17 +50,18 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import coil.compose.AsyncImage
-import coil.request.ImageRequest
 import com.example.lostandfound.viewmodel.FormState
+import com.example.lostandfound.viewmodel.ImageState
 import com.example.lostandfound.viewmodel.ImageUploadState
 import com.example.lostandfound.viewmodel.LostAndFoundViewModel
+import com.example.lostandfound.viewmodel.PostState
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -65,70 +73,55 @@ fun PostScreen(
     var title by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
     var contact by remember { mutableStateOf("") }
-    var imageUri by remember { mutableStateOf<Uri?>(null) }
-    var uploadedImageUrl by remember { mutableStateOf("") }
     
-    val formState by viewModel.formState.collectAsState()
-    val imageUploadState by viewModel.imageUploadState.collectAsState()
-    val snackbarHostState = remember { SnackbarHostState() }
-    val scope = rememberCoroutineScope()
-    
-    // For image picking
     val context = LocalContext.current
+    val postState by viewModel.postState.collectAsState()
+    val imageState by viewModel.imageState.collectAsState()
+    
     val imagePicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
         uri?.let {
-            imageUri = it
-            viewModel.uploadImage(it)
+            try {
+                context.contentResolver.openInputStream(it)?.use { inputStream ->
+                    viewModel.handleImageSelection(inputStream)
+                }
+            } catch (e: Exception) {
+                Toast.makeText(context, "Error loading image", Toast.LENGTH_SHORT).show()
+            }
         }
     }
-    
-    LaunchedEffect(formState) {
-        when (formState) {
-            is FormState.Success -> {
-                scope.launch {
-                    snackbarHostState.showSnackbar((formState as FormState.Success).message)
-                }
-                viewModel.resetFormState()
+
+    LaunchedEffect(postState) {
+        when (postState) {
+            is PostState.Success -> {
+                Toast.makeText(context, "Post created successfully", Toast.LENGTH_SHORT).show()
+                // Reset form fields
+                title = ""
+                description = ""
+                contact = ""
+                viewModel.resetImageState()
+                viewModel.resetPostState()
                 onNavigateBack()
             }
-            is FormState.Error -> {
-                scope.launch {
-                    snackbarHostState.showSnackbar((formState as FormState.Error).message)
-                }
-                viewModel.resetFormState()
+            is PostState.Error -> {
+                Toast.makeText(
+                    context,
+                    (postState as PostState.Error).message,
+                    Toast.LENGTH_LONG
+                ).show()
             }
             else -> {}
         }
     }
-    
-    LaunchedEffect(imageUploadState) {
-        when (imageUploadState) {
-            is ImageUploadState.Success -> {
-                uploadedImageUrl = (imageUploadState as ImageUploadState.Success).imageUrl
-                scope.launch {
-                    snackbarHostState.showSnackbar("Image uploaded successfully")
-                }
-                viewModel.resetImageUploadState()
-            }
-            is ImageUploadState.Error -> {
-                scope.launch {
-                    snackbarHostState.showSnackbar((imageUploadState as ImageUploadState.Error).message)
-                }
-                viewModel.resetImageUploadState()
-            }
-            else -> {}
-        }
-    }
-    
+
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("Post Lost Item") },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -136,142 +129,156 @@ fun PostScreen(
                     titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
                 )
             )
-        },
-        snackbarHost = { SnackbarHost(snackbarHostState) }
+        }
     ) { padding ->
-        Box(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
+                .padding(16.dp)
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp)
-                    .verticalScroll(rememberScrollState())
-            ) {
+            OutlinedTextField(
+                value = title,
+                onValueChange = { title = it },
+                label = { Text("Title") },
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            OutlinedTextField(
+                value = description,
+                onValueChange = { description = it },
+                label = { Text("Description") },
+                modifier = Modifier.fillMaxWidth(),
+                minLines = 3
+            )
+
+            OutlinedTextField(
+                value = contact,
+                onValueChange = { contact = it },
+                label = { Text("Contact Information") },
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            // Image section
+            Column {
                 Text(
-                    text = "Post a Lost Item",
-                    style = MaterialTheme.typography.titleLarge
+                    text = "Image",
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.padding(bottom = 8.dp)
                 )
-                
-                Spacer(modifier = Modifier.height(24.dp))
-                
-                OutlinedTextField(
-                    value = title,
-                    onValueChange = { title = it },
-                    label = { Text("Title") },
-                    modifier = Modifier.fillMaxWidth(),
-                    keyboardOptions = KeyboardOptions(
-                        capitalization = KeyboardCapitalization.Sentences,
-                        imeAction = ImeAction.Next
-                    )
-                )
-                
-                Spacer(modifier = Modifier.height(16.dp))
-                
-                OutlinedTextField(
-                    value = description,
-                    onValueChange = { description = it },
-                    label = { Text("Description") },
-                    modifier = Modifier.fillMaxWidth(),
-                    minLines = 3,
-                    maxLines = 5,
-                    keyboardOptions = KeyboardOptions(
-                        capitalization = KeyboardCapitalization.Sentences,
-                        imeAction = ImeAction.Next
-                    )
-                )
-                
-                Spacer(modifier = Modifier.height(16.dp))
-                
-                OutlinedTextField(
-                    value = contact,
-                    onValueChange = { contact = it },
-                    label = { Text("Contact (Phone Number)") },
-                    modifier = Modifier.fillMaxWidth(),
-                    keyboardOptions = KeyboardOptions(
-                        keyboardType = KeyboardType.Phone,
-                        imeAction = ImeAction.Next
-                    )
-                )
-                
-                Spacer(modifier = Modifier.height(16.dp))
-                
-                // Image upload section
-                Text(
-                    text = "Add Image (Optional)",
-                    style = MaterialTheme.typography.titleMedium
-                )
-                
-                Spacer(modifier = Modifier.height(8.dp))
-                
-                if (imageUri != null) {
-                    AsyncImage(
-                        model = ImageRequest.Builder(context)
-                            .data(imageUri)
-                            .crossfade(true)
-                            .build(),
-                        contentDescription = "Selected image",
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .aspectRatio(4/3f)
-                            .clip(MaterialTheme.shapes.medium)
-                            .border(1.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.medium),
-                        contentScale = ContentScale.Crop
-                    )
-                } else {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .aspectRatio(4/3f)
-                            .clip(MaterialTheme.shapes.medium)
-                            .border(1.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.medium)
-                            .clickable { imagePicker.launch("image/*") },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Image,
-                            contentDescription = "Add image",
-                            modifier = Modifier.padding(16.dp),
-                            tint = MaterialTheme.colorScheme.outline
-                        )
-                    }
-                }
-                
-                if (imageUri != null && imageUploadState is ImageUploadState.Idle) {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Button(
-                        onClick = { imagePicker.launch("image/*") },
-                        modifier = Modifier.align(Alignment.End)
-                    ) {
-                        Text("Change Image")
-                    }
-                }
-                
-                Spacer(modifier = Modifier.height(24.dp))
-                
-                Button(
-                    onClick = {
-                        if (validateForm(title, description, contact)) {
-                            viewModel.createLostItem(title, description, contact, uploadedImageUrl)
+
+                when (val currentImageState = imageState) {
+                    is ImageState.Success -> {
+                        val bitmap = try {
+                            val imageBytes = Base64.decode(currentImageState.base64String, Base64.DEFAULT)
+                            BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
+                        } catch (e: Exception) {
+                            null
+                        }
+                        
+                        if (bitmap != null) {
+                            Image(
+                                bitmap = bitmap.asImageBitmap(),
+                                contentDescription = "Selected image",
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(200.dp)
+                                    .clip(MaterialTheme.shapes.medium),
+                                contentScale = ContentScale.Crop
+                            )
+                            
+                            TextButton(
+                                onClick = { viewModel.resetImageState() },
+                                modifier = Modifier.align(Alignment.End)
+                            ) {
+                                Text("Remove Image")
+                            }
                         } else {
-                            scope.launch {
-                                snackbarHostState.showSnackbar("Please fill all required fields")
+                            Text(
+                                text = "Failed to load image",
+                                color = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.padding(vertical = 8.dp)
+                            )
+                            OutlinedButton(
+                                onClick = { imagePicker.launch("image/*") },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.AddPhotoAlternate,
+                                    contentDescription = null,
+                                    modifier = Modifier.padding(end = 8.dp)
+                                )
+                                Text("Try Again")
                             }
                         }
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    enabled = formState !is FormState.Loading && imageUploadState !is ImageUploadState.Loading
-                ) {
-                    Text("Submit")
+                    }
+                    is ImageState.Loading -> {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(200.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator()
+                        }
+                    }
+                    is ImageState.Error -> {
+                        Text(
+                            text = currentImageState.message,
+                            color = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.padding(vertical = 8.dp)
+                        )
+                        OutlinedButton(
+                            onClick = { imagePicker.launch("image/*") },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.AddPhotoAlternate,
+                                contentDescription = null,
+                                modifier = Modifier.padding(end = 8.dp)
+                            )
+                            Text("Try Again")
+                        }
+                    }
+                    ImageState.NoImage -> {
+                        OutlinedButton(
+                            onClick = { imagePicker.launch("image/*") },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.AddPhotoAlternate,
+                                contentDescription = null,
+                                modifier = Modifier.padding(end = 8.dp)
+                            )
+                            Text("Add Image")
+                        }
+                    }
                 }
             }
-            
-            if (formState is FormState.Loading || imageUploadState is ImageUploadState.Loading) {
-                CircularProgressIndicator(
-                    modifier = Modifier.align(Alignment.Center)
-                )
+
+            Button(
+                onClick = {
+                    viewModel.createLostItem(
+                        title = title,
+                        description = description,
+                        contact = contact,
+                        imageBase64 = (imageState as? ImageState.Success)?.base64String ?: ""
+                    )
+                },
+                modifier = Modifier.fillMaxWidth(),
+                enabled = title.isNotBlank() && description.isNotBlank() && contact.isNotBlank() &&
+                         postState !is PostState.Loading
+            ) {
+                if (postState is PostState.Loading) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(24.dp),
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
+                } else {
+                    Text("Post")
+                }
             }
         }
     }

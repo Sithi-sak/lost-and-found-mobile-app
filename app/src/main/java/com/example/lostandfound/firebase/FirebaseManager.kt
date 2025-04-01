@@ -1,8 +1,13 @@
 package com.example.lostandfound.firebase
 
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.net.Uri
+import android.util.Base64
 import android.util.Log
+import com.example.lostandfound.model.Chat
 import com.example.lostandfound.model.LostItem
+import com.example.lostandfound.model.Message
 import com.example.lostandfound.utils.FirebaseStorageUtils
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
@@ -14,12 +19,16 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
+import java.io.ByteArrayOutputStream
+import java.io.InputStream
 import java.util.UUID
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 class FirebaseManager {
     private val auth = FirebaseAuth.getInstance()
     private val db = FirebaseFirestore.getInstance()
-    private val storage = FirebaseStorage.getInstance()
+    private val storage = FirebaseStorage.getInstance().reference
     private val lostItemsCollection = db.collection("lost_items")
     private val countersCollection = db.collection("counters")
     private val COUNTER_DOC_ID = "lost_items_counter"
@@ -72,7 +81,7 @@ class FirebaseManager {
         return try {
             val userId = getCurrentUser()?.uid ?: "anonymous"
             val filename = "lostitem_${UUID.randomUUID()}.jpg"
-            val fileRef = storage.reference.child("lost_item_images/$userId/$filename")
+            val fileRef = storage.child("lost_item_images/$userId/$filename")
             
             // Check file size - 10MB limit
             val contentResolver = FirebaseStorageUtils.getContentResolver()
@@ -116,23 +125,35 @@ class FirebaseManager {
     }
     
     // Firestore methods
-    suspend fun addLostItem(lostItem: LostItem): Result<String> {
-        return try {
+    suspend fun addLostItem(
+        title: String,
+        description: String,
+        contact: String,
+        imageBase64: String = ""
+    ): Result<String> = withContext(Dispatchers.IO) {
+        try {
             val currentUser = getCurrentUser()
-            val userId = currentUser?.uid ?: "anonymous"
-            val userEmail = currentUser?.email ?: ""
-            val numericId = getNextNumericId()
-            
-            val itemWithIds = lostItem.copy(
-                userId = userId,
-                userEmail = userEmail,
-                numericId = numericId
+            if (currentUser == null) {
+                return@withContext Result.failure(Exception("User not authenticated"))
+            }
+
+            // Get next numeric ID
+            val nextId = getNextNumericId()
+
+            val lostItem = LostItem(
+                title = title,
+                description = description,
+                contact = contact,
+                userId = currentUser.uid,
+                userEmail = currentUser.email ?: "",
+                username = currentUser.displayName ?: currentUser.email ?: "Anonymous",
+                imageBase64 = imageBase64,
+                numericId = nextId
             )
-            
-            val docRef = lostItemsCollection.add(itemWithIds).await()
-            Result.success(docRef.id)
+
+            val documentRef = lostItemsCollection.add(lostItem).await()
+            Result.success(documentRef.id)
         } catch (e: Exception) {
-            Log.e("FirebaseManager", "Error adding lost item", e)
             Result.failure(e)
         }
     }
@@ -149,27 +170,8 @@ class FirebaseManager {
     
     suspend fun deleteLostItem(itemId: String): Result<Unit> {
         return try {
-            // Get item to check for image
-            val itemSnapshot = lostItemsCollection.document(itemId).get().await()
-            val item = itemSnapshot.toObject(LostItem::class.java)
-            
             // Delete item document
             lostItemsCollection.document(itemId).delete().await()
-            
-            // If item had an image, delete the image too
-            item?.let {
-                if (it.imageUrl.isNotEmpty()) {
-                    try {
-                        // Get storage reference from URL and delete
-                        val storageRef = storage.getReferenceFromUrl(it.imageUrl)
-                        storageRef.delete().await()
-                    } catch (e: Exception) {
-                        Log.e("FirebaseManager", "Error deleting image", e)
-                        // Continue even if image deletion fails
-                    }
-                }
-            }
-            
             Result.success(Unit)
         } catch (e: Exception) {
             Log.e("FirebaseManager", "Error deleting lost item", e)
@@ -278,6 +280,190 @@ class FirebaseManager {
             }
         } catch (e: Exception) {
             Log.e("FirebaseManager", "Error getting lost item by ID", e)
+            Result.failure(e)
+        }
+    }
+
+    fun getChats(): Flow<List<Chat>> = callbackFlow {
+        val currentUser = auth.currentUser ?: throw Exception("User not authenticated")
+        
+        val subscription = db.collection("chats")
+            .whereArrayContains("participants", currentUser.uid)
+            .addSnapshotListener { snapshot, e ->
+                if (e != null) {
+                    close(e)
+                    return@addSnapshotListener
+                }
+
+                if (snapshot != null) {
+                    val chats = snapshot.toObjects(Chat::class.java)
+                    trySend(chats)
+                }
+            }
+
+        awaitClose { subscription.remove() }
+    }
+
+    fun getChatMessages(chatId: String): Flow<List<Message>> = callbackFlow {
+        Log.d("FirebaseManager", "Starting to listen for messages in chat: $chatId")
+        
+        val messagesRef = db.collection("chats")
+            .document(chatId)
+            .collection("messages")
+            .orderBy("timestamp", Query.Direction.ASCENDING)
+        
+        val subscription = messagesRef.addSnapshotListener { snapshot, error ->
+            if (error != null) {
+                Log.e("FirebaseManager", "Error listening for messages: ${error.message}")
+                return@addSnapshotListener
+            }
+            
+            if (snapshot == null) {
+                Log.d("FirebaseManager", "No messages snapshot available")
+                trySend(emptyList())
+                return@addSnapshotListener
+            }
+            
+            val messages = snapshot.documents.mapNotNull { doc ->
+                try {
+                    val message = doc.toObject(Message::class.java)
+                    if (message == null) {
+                        Log.w("FirebaseManager", "Failed to convert document to Message: ${doc.id}")
+                    }
+                    message
+                } catch (e: Exception) {
+                    Log.e("FirebaseManager", "Error converting document to Message: ${e.message}")
+                    null
+                }
+            }
+            
+            Log.d("FirebaseManager", "Retrieved ${messages.size} messages for chat: $chatId")
+            trySend(messages)
+        }
+        
+        awaitClose {
+            Log.d("FirebaseManager", "Closing messages listener for chat: $chatId")
+            subscription.remove()
+        }
+    }
+
+    suspend fun sendMessage(chatId: String, content: String): Result<Unit> = withContext(Dispatchers.IO) {
+        try {
+            val currentUser = auth.currentUser ?: throw Exception("User not authenticated")
+            Log.d("FirebaseManager", "Sending message in chat: $chatId")
+            
+            val message = Message(
+                chatId = chatId,
+                senderId = currentUser.uid,
+                senderName = currentUser.displayName ?: currentUser.email ?: "Unknown",
+                content = content,
+                timestamp = System.currentTimeMillis()
+            )
+
+            // Create messages subcollection if it doesn't exist
+            val chatRef = db.collection("chats").document(chatId)
+            val messagesRef = chatRef.collection("messages")
+            
+            // Add the message
+            val messageRef = messagesRef.add(message).await()
+            Log.d("FirebaseManager", "Message sent with ID: ${messageRef.id}")
+
+            // Update chat document with last message info
+            chatRef.update(
+                mapOf(
+                    "lastMessage" to content,
+                    "lastMessageTimestamp" to message.timestamp
+                )
+            ).await()
+
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e("FirebaseManager", "Error sending message", e)
+            Result.failure(e)
+        }
+    }
+
+    suspend fun createOrOpenChat(otherUserId: String, itemId: String): Result<String> = withContext(Dispatchers.IO) {
+        try {
+            val currentUser = auth.currentUser ?: throw Exception("User not authenticated")
+            Log.d("FirebaseManager", "Creating/opening chat with user: $otherUserId for item: $itemId")
+
+            // Check if chat already exists
+            val existingChat = db.collection("chats")
+                .whereArrayContains("participants", currentUser.uid)
+                .get()
+                .await()
+                .documents
+                .firstOrNull { doc ->
+                    val participants = doc.get("participants") as? List<*>
+                    val chatItemId = doc.getString("itemId")
+                    participants?.containsAll(listOf(currentUser.uid, otherUserId)) == true &&
+                    chatItemId == itemId
+                }
+
+            if (existingChat != null) {
+                Log.d("FirebaseManager", "Found existing chat: ${existingChat.id}")
+                return@withContext Result.success(existingChat.id)
+            }
+
+            // Create new chat
+            val chat = Chat(
+                participants = listOf(currentUser.uid, otherUserId),
+                itemId = itemId,
+                lastMessage = "",
+                lastMessageTimestamp = System.currentTimeMillis(),
+                createdAt = System.currentTimeMillis()
+            )
+
+            val chatRef = db.collection("chats").add(chat).await()
+            Log.d("FirebaseManager", "Created new chat: ${chatRef.id}")
+
+            Result.success(chatRef.id)
+        } catch (e: Exception) {
+            Log.e("FirebaseManager", "Error creating/opening chat", e)
+            Result.failure(e)
+        }
+    }
+
+    suspend fun convertImageToBase64(inputStream: InputStream): Result<String> {
+        return try {
+            // Read the input stream into a bitmap
+            val originalBitmap = BitmapFactory.decodeStream(inputStream)
+                ?: return Result.failure(Exception("Failed to decode image"))
+
+            // Calculate new dimensions while maintaining aspect ratio
+            val maxDimension = 1024
+            val ratio = minOf(
+                maxDimension.toFloat() / originalBitmap.width,
+                maxDimension.toFloat() / originalBitmap.height
+            )
+            val newWidth = (originalBitmap.width * ratio).toInt()
+            val newHeight = (originalBitmap.height * ratio).toInt()
+
+            // Create scaled bitmap
+            val scaledBitmap = Bitmap.createScaledBitmap(
+                originalBitmap,
+                newWidth,
+                newHeight,
+                true
+            )
+
+            // Convert to Base64
+            val outputStream = ByteArrayOutputStream()
+            scaledBitmap.compress(Bitmap.CompressFormat.JPEG, 80, outputStream)
+            val imageBytes = outputStream.toByteArray()
+            val base64String = Base64.encodeToString(imageBytes, Base64.DEFAULT)
+
+            // Clean up
+            if (scaledBitmap != originalBitmap) {
+                scaledBitmap.recycle()
+            }
+            originalBitmap.recycle()
+            outputStream.close()
+
+            Result.success(base64String)
+        } catch (e: Exception) {
+            Log.e("FirebaseManager", "Error converting image to Base64", e)
             Result.failure(e)
         }
     }
