@@ -8,5 +8,7 @@ data class Chat(
     val itemId: String = "",
     val lastMessage: String = "",
     val lastMessageTimestamp: Long = 0,
-    val createdAt: Long = System.currentTimeMillis()
+    val createdAt: Long = System.currentTimeMillis(),
+    val otherUserName: String? = null,
+    val otherUserEmail: String? = null
 ) 

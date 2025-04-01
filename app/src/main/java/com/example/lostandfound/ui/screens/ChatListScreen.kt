@@ -1,16 +1,20 @@
 package com.example.lostandfound.ui.screens
 
+import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.lostandfound.model.Chat
 import com.example.lostandfound.viewmodel.LostAndFoundViewModel
+import com.example.lostandfound.viewmodel.ChatState
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -21,14 +25,24 @@ fun ChatListScreen(
     viewModel: LostAndFoundViewModel,
     onNavigateToChat: (String) -> Unit
 ) {
-    val chats = remember { mutableStateListOf<Chat>() }
+    val chats by viewModel.chats.collectAsState()
+    val chatState by viewModel.chatState.collectAsState()
+    val context = LocalContext.current
 
+    // Fetch chats when screen is first displayed
     LaunchedEffect(Unit) {
-        // TODO: Implement chat list fetching from Firestore
-        // viewModel.getChats().collect { newChats ->
-        //     chats.clear()
-        //     chats.addAll(newChats)
-        // }
+        viewModel.getChats()
+    }
+
+    // Show error messages if any
+    LaunchedEffect(chatState) {
+        if (chatState is ChatState.Error) {
+            Toast.makeText(
+                context,
+                (chatState as ChatState.Error).message,
+                Toast.LENGTH_SHORT
+            ).show()
+        }
     }
 
     Column(modifier = modifier.fillMaxSize()) {
@@ -41,30 +55,56 @@ fun ChatListScreen(
             )
         )
 
-        if (chats.isEmpty()) {
-            // Empty state
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(16.dp),
-                contentAlignment = androidx.compose.ui.Alignment.Center
-            ) {
-                Text(
-                    text = "No chats yet",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+        when (chatState) {
+            ChatState.Loading -> {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
+                }
             }
-        } else {
-            // Chat list
-            LazyColumn(
-                modifier = Modifier.fillMaxSize()
-            ) {
-                items(chats) { chat ->
-                    ChatListItem(
-                        chat = chat,
-                        onClick = { onNavigateToChat(chat.id) }
+            is ChatState.Error -> {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(16.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "Error loading chats",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.error
                     )
+                }
+            }
+            else -> {
+                if (chats.isEmpty()) {
+                    // Empty state
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(16.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "No chats yet",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                } else {
+                    // Chat list
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        items(chats) { chat ->
+                            ChatListItem(
+                                chat = chat,
+                                onClick = { onNavigateToChat(chat.id) }
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -81,9 +121,8 @@ fun ChatListItem(
             .clickable(onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 8.dp),
         headlineContent = {
-            // TODO: Replace with actual user name
             Text(
-                text = "User",
+                text = chat.otherUserName ?: "User",
                 style = MaterialTheme.typography.titleMedium
             )
         },
@@ -104,7 +143,7 @@ fun ChatListItem(
             )
         }
     )
-    Divider()
+    HorizontalDivider()
 }
 
 private fun formatTimestamp(timestamp: Long): String {

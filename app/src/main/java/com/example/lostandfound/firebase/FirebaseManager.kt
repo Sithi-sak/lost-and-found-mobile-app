@@ -24,6 +24,7 @@ import java.io.InputStream
 import java.util.UUID
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.launch
 
 class FirebaseManager {
     private val auth = FirebaseAuth.getInstance()
@@ -285,23 +286,50 @@ class FirebaseManager {
     }
 
     fun getChats(): Flow<List<Chat>> = callbackFlow {
-        val currentUser = auth.currentUser ?: throw Exception("User not authenticated")
-        
-        val subscription = db.collection("chats")
-            .whereArrayContains("participants", currentUser.uid)
-            .addSnapshotListener { snapshot, e ->
-                if (e != null) {
-                    close(e)
-                    return@addSnapshotListener
+        try {
+            val currentUser = auth.currentUser ?: throw Exception("User not authenticated")
+            Log.d("FirebaseManager", "Getting chats for user: ${currentUser.uid}")
+            
+            val subscription = db.collection("chats")
+                .whereArrayContains("participants", currentUser.uid)
+                .orderBy("lastMessageTimestamp", Query.Direction.DESCENDING)
+                .addSnapshotListener { snapshot, e ->
+                    if (e != null) {
+                        Log.e("FirebaseManager", "Error getting chats: ${e.message}", e)
+                        if (e.message?.contains("PERMISSION_DENIED") == true) {
+                            // If no chats exist yet, just emit an empty list
+                            trySend(emptyList())
+                        } else {
+                            close(e)
+                        }
+                        return@addSnapshotListener
+                    }
+
+                    if (snapshot != null) {
+                        val chats = snapshot.documents.mapNotNull { doc ->
+                            try {
+                                doc.toObject(Chat::class.java)?.copy(id = doc.id)
+                            } catch (e: Exception) {
+                                Log.e("FirebaseManager", "Error converting chat document", e)
+                                null
+                            }
+                        }
+                        Log.d("FirebaseManager", "Retrieved ${chats.size} chats")
+                        trySend(chats)
+                    } else {
+                        Log.d("FirebaseManager", "No chats found")
+                        trySend(emptyList())
+                    }
                 }
 
-                if (snapshot != null) {
-                    val chats = snapshot.toObjects(Chat::class.java)
-                    trySend(chats)
-                }
+            awaitClose { 
+                Log.d("FirebaseManager", "Closing chats listener")
+                subscription.remove() 
             }
-
-        awaitClose { subscription.remove() }
+        } catch (e: Exception) {
+            Log.e("FirebaseManager", "Error in getChats", e)
+            close(e)
+        }
     }
 
     fun getChatMessages(chatId: String): Flow<List<Message>> = callbackFlow {
@@ -388,6 +416,10 @@ class FirebaseManager {
             val currentUser = auth.currentUser ?: throw Exception("User not authenticated")
             Log.d("FirebaseManager", "Creating/opening chat with user: $otherUserId for item: $itemId")
 
+            // Get the lost item first to get user information
+            val lostItem = lostItemsCollection.document(itemId).get().await()
+                .toObject(LostItem::class.java) ?: throw Exception("Item not found")
+
             // Check if chat already exists
             val existingChat = db.collection("chats")
                 .whereArrayContains("participants", currentUser.uid)
@@ -407,12 +439,14 @@ class FirebaseManager {
             }
 
             // Create new chat
-            val chat = Chat(
-                participants = listOf(currentUser.uid, otherUserId),
-                itemId = itemId,
-                lastMessage = "",
-                lastMessageTimestamp = System.currentTimeMillis(),
-                createdAt = System.currentTimeMillis()
+            val chat = hashMapOf(
+                "participants" to listOf(currentUser.uid, otherUserId),
+                "itemId" to itemId,
+                "lastMessage" to "",
+                "lastMessageTimestamp" to System.currentTimeMillis(),
+                "createdAt" to System.currentTimeMillis(),
+                "otherUserName" to lostItem.username,
+                "otherUserEmail" to lostItem.userEmail
             )
 
             val chatRef = db.collection("chats").add(chat).await()
