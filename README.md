@@ -4,13 +4,13 @@
 An Android-based e-commerce platform built with Java, designed for seamless buying and selling experiences. This collaborative project is hosted on GitHub and leverages modern tools for development and design.
 
 ### Features checklist
-- [ ] User can create an account
-- [ ] User can login with account and password
-- [ ] User can browse through list of lost items
-- [ ] User can post new lost item
-- [ ] User can call or message the person that post the item with the provided information
-- [ ] User can see the details of the lost item provided by other users
-- [ ] User can see the list of their post history and detail of the item posted by them
+- [x] User can create an account
+- [x] User can login with account and password
+- [x] User can browse through list of lost items
+- [x] User can post new lost item
+- [x] User can call or message the person that post the item with the provided information
+- [x] User can see the details of the lost item provided by other users
+- [x] User can see the list of their post history and detail of the item posted by them
 
 ## Technologies and Tools
 
