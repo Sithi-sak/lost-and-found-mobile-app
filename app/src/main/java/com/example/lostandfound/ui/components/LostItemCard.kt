@@ -1,54 +1,57 @@
 package com.example.lostandfound.ui.components
 
-import android.graphics.BitmapFactory
-import androidx.compose.foundation.Image
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import android.util.Base64
 import com.example.lostandfound.model.ItemStatus
 import com.example.lostandfound.model.LostItem
+import com.example.lostandfound.ui.theme.LightGray
+import com.example.lostandfound.ui.theme.Shapes
 import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
-import androidx.compose.ui.graphics.Color
+import java.util.*
+
+// Define Laravel-style colors
+private val BorderGrey = Color(0xFFDEE2E6)
+private val TextGrey = Color(0xFF6C757D)
+private val White = Color(0xFFFFFFFF)
+private val LostRed = Color(0xFFDC3545)
+private val FoundGreen = Color(0xFF28A745)
+
+private fun formatDate(timestamp: Long): String {
+    val formatter = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
+    return formatter.format(Date(timestamp))
+}
 
 @Composable
 fun LostItemCard(
     item: LostItem,
-    onItemClick: () -> Unit,
-    onStatusChange: (String, ItemStatus) -> Unit,
+    onClick: () -> Unit,
+    onStatusChange: ((ItemStatus) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .padding(8.dp)
-            .clickable { onItemClick() },
-        shape = RoundedCornerShape(12.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+            .padding(vertical = 4.dp)
+            .clickable(onClick = onClick)
+            .border(
+                width = 1.dp,
+                color = BorderGrey,
+                shape = Shapes.extraSmall
+            ),
+        shape = Shapes.extraSmall,
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = White
+        )
     ) {
         Column(
             modifier = Modifier
@@ -63,26 +66,26 @@ fun LostItemCard(
                 Text(
                     text = item.title,
                     style = MaterialTheme.typography.titleLarge,
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = Color(0xFF212529)  // Laravel dark text color
                 )
                 
                 Surface(
+                    color = if (item.status == ItemStatus.LOST) LostRed else FoundGreen,
+                    shape = Shapes.extraSmall,
+                    contentColor = White,
                     modifier = Modifier
-                        .clickable {
-                            val newStatus = if (item.status == ItemStatus.LOST) ItemStatus.FOUND else ItemStatus.LOST
-                            onStatusChange(item.id, newStatus)
-                        }
-                        .padding(4.dp),
-                    shape = RoundedCornerShape(16.dp),
-                    color = when (item.status) {
-                        ItemStatus.LOST -> Color(0xFFB71C1C) // Dark Red
-                        ItemStatus.FOUND -> Color(0xFF2E7D32) // Dark Green
-                    }
+                        .clickable(
+                            enabled = onStatusChange != null,
+                            onClick = {
+                                onStatusChange?.invoke(
+                                    if (item.status == ItemStatus.LOST) ItemStatus.FOUND else ItemStatus.LOST
+                                )
+                            }
+                        )
                 ) {
                     Text(
                         text = item.status.name,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                        color = Color.White,
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
                         style = MaterialTheme.typography.labelMedium
                     )
                 }
@@ -92,8 +95,10 @@ fun LostItemCard(
                 Text(
                     text = item.description,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 8.dp)
+                    color = TextGrey,
+                    modifier = Modifier.padding(top = 8.dp),
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
 
@@ -101,7 +106,7 @@ fun LostItemCard(
                 Text(
                     text = "#${item.numericId}",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = TextGrey,
                     modifier = Modifier.padding(top = 4.dp)
                 )
             }
@@ -116,19 +121,14 @@ fun LostItemCard(
                 Text(
                     text = "Posted by ${item.username}",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = TextGrey
                 )
                 Text(
                     text = formatDate(item.timestamp),
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = TextGrey
                 )
             }
         }
     }
-}
-
-private fun formatDate(timestamp: Long): String {
-    val sdf = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
-    return sdf.format(Date(timestamp))
 } 

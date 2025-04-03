@@ -50,6 +50,8 @@ import com.example.lostandfound.viewmodel.LostAndFoundViewModel
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.shape.RoundedCornerShape
+import com.example.lostandfound.ui.theme.Shapes
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -84,40 +86,6 @@ fun BrowseScreen(
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
                     titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
                 ),
-                actions = {
-                    IconButton(onClick = { showSettingsMenu = true }) {
-                        Icon(Icons.Default.MoreVert, contentDescription = "More options")
-                    }
-                    DropdownMenu(
-                        expanded = showSettingsMenu,
-                        onDismissRequest = { showSettingsMenu = false }
-                    ) {
-                        DropdownMenuItem(
-                            text = { Text("My Posts") },
-                            leadingIcon = { Icon(Icons.AutoMirrored.Filled.List, "My Posts") },
-                            onClick = {
-                                showSettingsMenu = false
-                                onNavigateToHistory()
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text("Settings") },
-                            leadingIcon = { Icon(Icons.Default.Settings, "Settings") },
-                            onClick = {
-                                showSettingsMenu = false
-                                onNavigateToSettings()
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text("Logout") },
-                            leadingIcon = { Icon(Icons.AutoMirrored.Filled.ExitToApp, "Logout") },
-                            onClick = {
-                                showSettingsMenu = false
-                                onLogout()
-                            }
-                        )
-                    }
-                }
             )
         },
         floatingActionButton = {
@@ -149,7 +117,8 @@ fun BrowseScreen(
                         Button(
                             onClick = { viewModel.previousPage() },
                             enabled = currentPage > 1,
-                            modifier = Modifier.width(100.dp)
+                            modifier = Modifier.width(100.dp),
+                            shape = Shapes.extraSmall,
                         ) {
                             Row(
                                 horizontalArrangement = Arrangement.Center,
@@ -173,7 +142,8 @@ fun BrowseScreen(
                         Button(
                             onClick = { viewModel.nextPage() },
                             enabled = currentPage < totalPages,
-                            modifier = Modifier.width(100.dp)
+                            modifier = Modifier.width(100.dp),
+                            shape = Shapes.extraSmall,
                         ) {
                             Row(
                                 horizontalArrangement = Arrangement.Center,
@@ -213,9 +183,9 @@ fun BrowseScreen(
                     items(items) { item ->
                         LostItemCard(
                             item = item,
-                            onItemClick = { onNavigateToDetail(item) },
-                            onStatusChange = { itemId, newStatus ->
-                                viewModel.updateItemStatus(itemId, newStatus)
+                            onClick = { onNavigateToDetail(item) },
+                            onStatusChange = { newStatus ->
+                                viewModel.updateItemStatus(item.id, newStatus)
                             }
                         )
                     }

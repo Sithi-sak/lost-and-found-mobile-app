@@ -368,17 +368,34 @@ class LostAndFoundViewModel : ViewModel() {
 
     fun updateItemStatus(itemId: String, newStatus: ItemStatus) {
         viewModelScope.launch {
-            try {
-                firebaseManager.updateItemStatus(itemId, newStatus)
-                // Update local state
-                _items.update { currentItems ->
-                    currentItems.map { item ->
-                        if (item.id == itemId) item.copy(status = newStatus) else item
-                    }
+            // Get the current item
+            val result = firebaseManager.getLostItemById(itemId)
+            result.fold(
+                onSuccess = { item ->
+                    // Update the item with new status
+                    val updatedItem = item.copy(status = newStatus)
+                    firebaseManager.updateLostItem(itemId, updatedItem).fold(
+                        onSuccess = {
+                            // Update detail state if we're in detail view
+                            if (_detailState.value is DetailState.Success) {
+                                _detailState.value = DetailState.Success(updatedItem)
+                            }
+                            // Update items list if we're in list view
+                            _items.update { currentItems ->
+                                currentItems.map { 
+                                    if (it.id == itemId) updatedItem else it 
+                                }
+                            }
+                        },
+                        onFailure = { exception ->
+                            _detailState.value = DetailState.Error(exception.message ?: "Failed to update status")
+                        }
+                    )
+                },
+                onFailure = { exception ->
+                    _detailState.value = DetailState.Error(exception.message ?: "Failed to find item")
                 }
-            } catch (e: Exception) {
-                Log.e("ViewModel", "Error updating item status", e)
-            }
+            )
         }
     }
 }

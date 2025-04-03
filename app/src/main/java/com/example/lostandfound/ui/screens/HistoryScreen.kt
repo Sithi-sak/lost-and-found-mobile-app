@@ -31,45 +31,23 @@ fun HistoryScreen(
         viewModel.getUserLostItems()
     }
 
-    Column(modifier = modifier.fillMaxSize()) {
-        TopAppBar(
-            title = { Text("My Posts") },
-            navigationIcon = {
-                IconButton(onClick = onNavigateBack) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                }
-            },
-            colors = TopAppBarDefaults.topAppBarColors(
-                containerColor = MaterialTheme.colorScheme.primaryContainer,
-                titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
-            )
-        )
-
+    Box(modifier = modifier.fillMaxSize()) {
         if (isLoading) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator()
-            }
-        } else if (items.isEmpty()) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                Text("You haven't posted any items yet")
-            }
+            CircularProgressIndicator(
+                modifier = Modifier.align(Alignment.Center)
+            )
         } else {
             LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(16.dp)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
             ) {
                 items(items) { item ->
                     LostItemCard(
                         item = item,
-                        onItemClick = { onNavigateToDetail(item) },
-                        onStatusChange = { itemId, newStatus ->
-                            viewModel.updateItemStatus(itemId, newStatus)
+                        onClick = { onNavigateToDetail(item) },
+                        onStatusChange = { newStatus ->
+                            viewModel.updateItemStatus(item.id, newStatus)
                         }
                     )
                 }

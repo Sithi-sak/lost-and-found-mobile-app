@@ -5,6 +5,7 @@ import android.graphics.BitmapFactory
 import android.net.Uri
 import android.util.Base64
 import android.widget.Toast
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -46,17 +47,29 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import com.example.lostandfound.model.ItemStatus
 import com.example.lostandfound.model.LostItem
+import com.example.lostandfound.ui.theme.LostRed
+import com.example.lostandfound.ui.theme.FoundGreen
+import com.example.lostandfound.ui.theme.White
+import com.example.lostandfound.ui.theme.BorderGrey
+import com.example.lostandfound.ui.theme.TextGrey
 import com.example.lostandfound.viewmodel.AuthState
 import com.example.lostandfound.viewmodel.DetailState
 import com.example.lostandfound.viewmodel.LostAndFoundViewModel
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.clickable
+import com.example.lostandfound.ui.theme.DarkGray
+import com.example.lostandfound.ui.theme.LightGray
+import com.example.lostandfound.ui.theme.Shapes
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -197,22 +210,32 @@ private fun ItemDetailContent(
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .padding(16.dp)
             .verticalScroll(rememberScrollState())
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Card(
-            modifier = Modifier.fillMaxWidth(),
-            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+            modifier = Modifier
+                .fillMaxWidth()
+                .border(
+                    width = 1.dp,
+                    color = BorderGrey,
+                    shape = Shapes.extraSmall
+                ),
+            shape = Shapes.extraSmall,
+            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = LightGray
+            )
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(16.dp)
+                    .padding(24.dp)
             ) {
                 Text(
                     text = lostItem.title,
-                    style = MaterialTheme.typography.headlineMedium
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = Color(0xFF212529)  // Laravel dark text color
                 )
                 
                 Spacer(modifier = Modifier.height(8.dp))
@@ -225,112 +248,204 @@ private fun ItemDetailContent(
                     Text(
                         text = "Posted by ${lostItem.username}",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.primary
+                        color = TextGrey
                     )
                     
                     Text(
                         text = formatDate(lostItem.timestamp),
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.outline
+                        color = TextGrey
                     )
                 }
+
+                Spacer(modifier = Modifier.height(16.dp))
                 
                 // Display image if available
                 if (lostItem.imageBase64.isNotEmpty()) {
                     val imageBytes = Base64.decode(lostItem.imageBase64, Base64.DEFAULT)
                     val bitmap = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
                     
-                    androidx.compose.foundation.Image(
-                        bitmap = bitmap.asImageBitmap(),
-                        contentDescription = "Image of lost item",
+                    Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(200.dp)
-                            .clip(MaterialTheme.shapes.medium),
-                        contentScale = ContentScale.Crop
-                    )
+                            .border(
+                                width = 1.dp,
+                                color = BorderGrey,
+                                shape = Shapes.extraSmall
+                            )
+                    ) {
+                        androidx.compose.foundation.Image(
+                            bitmap = bitmap.asImageBitmap(),
+                            contentDescription = "Image of lost item",
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(200.dp),
+                            contentScale = ContentScale.Crop
+                        )
+                    }
                 }
                 
                 Spacer(modifier = Modifier.height(16.dp))
                 
                 // Status badge
                 Surface(
-                    color = MaterialTheme.colorScheme.primaryContainer,
-                    shape = RoundedCornerShape(16.dp),
-                    modifier = Modifier.padding(vertical = 8.dp)
+                    color = if (lostItem.status == ItemStatus.LOST) LostRed else FoundGreen,
+                    shape = Shapes.extraSmall,
+                    modifier = Modifier
+                        .clickable(enabled = isUsersOwnItem) {
+                            val newStatus = if (lostItem.status == ItemStatus.LOST) {
+                                ItemStatus.FOUND
+                            } else {
+                                ItemStatus.LOST
+                            }
+                            viewModel.updateItemStatus(lostItem.id, newStatus)
+                        }
                 ) {
                     Text(
-                        text = "Active",
+                        text = lostItem.status.name,
                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
                         style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                        color = White
                     )
+                }
+                
+                Spacer(modifier = Modifier.height(24.dp))
+                
+                // Description section
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .border(
+                            width = 1.dp,
+                            color = BorderGrey,
+                            shape = Shapes.extraSmall
+                        ),
+                    shape = Shapes.extraSmall,
+                    color = Color(0xFFF8F9FA)  // Laravel light gray background
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp)
+                    ) {
+                        Text(
+                            text = "Description",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = Color(0xFF212529)
+                        )
+                        
+                        Text(
+                            text = lostItem.description,
+                            style = MaterialTheme.typography.bodyLarge,
+                            modifier = Modifier.padding(top = 8.dp),
+                            color = TextGrey
+                        )
+                    }
                 }
                 
                 Spacer(modifier = Modifier.height(16.dp))
                 
-                Text(
-                    text = "Description",
-                    style = MaterialTheme.typography.titleMedium
-                )
-                
-                Text(
-                    text = lostItem.description,
-                    style = MaterialTheme.typography.bodyLarge,
-                    modifier = Modifier.padding(vertical = 8.dp)
-                )
-                
-                Spacer(modifier = Modifier.height(16.dp))
-                
                 // Location section
-                Text(
-                    text = "Location",
-                    style = MaterialTheme.typography.titleMedium
-                )
-                
-                Text(
-                    text = if (lostItem.location.isNotBlank()) lostItem.location else "No location provided",
-                    style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.padding(vertical = 8.dp),
-                    color = if (lostItem.location.isNotBlank()) 
-                        MaterialTheme.colorScheme.onSurface 
-                    else 
-                        MaterialTheme.colorScheme.outline
-                )
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .border(
+                            width = 1.dp,
+                            color = BorderGrey,
+                            shape = Shapes.extraSmall
+                        ),
+                    shape = Shapes.extraSmall,
+                    color = Color(0xFFF8F9FA)  // Laravel light gray background
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp)
+                    ) {
+                        Text(
+                            text = "Location",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = Color(0xFF212529)
+                        )
+                        
+                        Text(
+                            text = if (lostItem.location.isNotBlank()) lostItem.location else "No location provided",
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.padding(top = 8.dp),
+                            color = if (lostItem.location.isNotBlank()) TextGrey else Color(0xFFADB5BD)
+                        )
+                    }
+                }
                 
                 Spacer(modifier = Modifier.height(16.dp))
                 
-                Text(
-                    text = "Contact",
-                    style = MaterialTheme.typography.titleMedium
-                )
-                
-                Text(
-                    text = lostItem.contact,
-                    style = MaterialTheme.typography.bodyLarge,
-                    modifier = Modifier.padding(vertical = 8.dp)
-                )
+                // Contact section
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .border(
+                            width = 1.dp,
+                            color = BorderGrey,
+                            shape = Shapes.extraSmall
+                        ),
+                    shape = Shapes.extraSmall,
+                    color = Color(0xFFF8F9FA)  // Laravel light gray background
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp)
+                    ) {
+                        Text(
+                            text = "Contact",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = Color(0xFF212529)
+                        )
+                        
+                        Text(
+                            text = lostItem.contact,
+                            style = MaterialTheme.typography.bodyLarge,
+                            modifier = Modifier.padding(top = 8.dp),
+                            color = TextGrey
+                        )
+                    }
+                }
             }
         }
         
         if (!isUsersOwnItem) {
-            Column(
+            Spacer(modifier = Modifier.height(24.dp))
+            
+            // Action buttons
+            Row(
                 modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // First row - Call and Chat
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                Button(
+                    onClick = {
+                        val intent = Intent(Intent.ACTION_DIAL).apply {
+                            data = Uri.parse("tel:${lostItem.contact}")
+                        }
+                        context.startActivity(intent)
+                    },
+                    modifier = Modifier
+                        .weight(1f)
+                        .border(
+                            width = 1.dp,
+                            color = MaterialTheme.colorScheme.primary,
+                            shape = Shapes.extraSmall
+                        ),
+                    shape = Shapes.extraSmall,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = White,
+                        contentColor = MaterialTheme.colorScheme.primary
+                    ),
+                    contentPadding = PaddingValues(16.dp)
                 ) {
-                    Button(
-                        onClick = {
-                            val intent = Intent(Intent.ACTION_DIAL).apply {
-                                data = Uri.parse("tel:${lostItem.contact}")
-                            }
-                            context.startActivity(intent)
-                        },
-                        modifier = Modifier.weight(1f)
+                    Row(
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth()
                     ) {
                         Icon(
                             imageVector = Icons.Default.Call,
@@ -339,20 +454,35 @@ private fun ItemDetailContent(
                         )
                         Text("Call")
                     }
-                    
-                    Button(
-                        onClick = {
-                            viewModel.createOrOpenChat(
-                                otherUserId = lostItem.userId,
-                                itemId = lostItem.id
-                            ) { chatId ->
-                                onNavigateToChat(chatId)
-                            }
-                        },
-                        modifier = Modifier.weight(1f),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.secondary
-                        )
+                }
+                
+                Button(
+                    onClick = {
+                        viewModel.createOrOpenChat(
+                            otherUserId = lostItem.userId,
+                            itemId = lostItem.id
+                        ) { chatId ->
+                            onNavigateToChat(chatId)
+                        }
+                    },
+                    modifier = Modifier
+                        .weight(1f)
+                        .border(
+                            width = 1.dp,
+                            color = MaterialTheme.colorScheme.primary,
+                            shape = Shapes.extraSmall
+                        ),
+                    shape = Shapes.extraSmall,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = White
+                    ),
+                    contentPadding = PaddingValues(16.dp)
+                ) {
+                    Row(
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth()
                     ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.Chat,

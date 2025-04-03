@@ -3,53 +3,28 @@ package com.example.lostandfound.ui.screens
 import android.graphics.BitmapFactory
 import android.net.Uri
 import android.util.Base64
-import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.AddPhotoAlternate
-import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.example.lostandfound.viewmodel.ImageState
 import com.example.lostandfound.viewmodel.LostAndFoundViewModel
 import com.example.lostandfound.viewmodel.PostState
+import androidx.compose.foundation.BorderStroke
+import com.example.lostandfound.ui.theme.Shapes
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -61,46 +36,26 @@ fun PostScreen(
     var description by remember { mutableStateOf("") }
     var contact by remember { mutableStateOf("") }
     var location by remember { mutableStateOf("") }
-    
     val context = LocalContext.current
     val postState by viewModel.postState.collectAsState()
     val imageState by viewModel.imageState.collectAsState()
-    
-    val imagePicker = rememberLauncherForActivityResult(
+
+    val launcher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
         uri?.let {
-            try {
-                context.contentResolver.openInputStream(it)?.use { inputStream ->
-                    viewModel.handleImageSelection(inputStream)
-                }
-            } catch (e: Exception) {
-                Toast.makeText(context, "Error loading image", Toast.LENGTH_SHORT).show()
+            val inputStream = context.contentResolver.openInputStream(it)
+            inputStream?.let { stream ->
+                viewModel.handleImageSelection(stream)
             }
         }
     }
 
     LaunchedEffect(postState) {
-        when (postState) {
-            is PostState.Success -> {
-                Toast.makeText(context, "Post created successfully", Toast.LENGTH_SHORT).show()
-                // Reset form fields
-                title = ""
-                description = ""
-                contact = ""
-                location = ""
-                viewModel.resetImageState()
-                viewModel.resetPostState()
-                onNavigateBack()
-            }
-            is PostState.Error -> {
-                Toast.makeText(
-                    context,
-                    (postState as PostState.Error).message,
-                    Toast.LENGTH_LONG
-                ).show()
-            }
-            else -> {}
+        if (postState is PostState.Success) {
+            onNavigateBack()
+            viewModel.resetPostState()
+            viewModel.resetImageState()
         }
     }
 
@@ -114,8 +69,9 @@ fun PostScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    titleContentColor = MaterialTheme.colorScheme.onPrimary,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onPrimary
                 )
             )
         }
@@ -132,157 +88,141 @@ fun PostScreen(
                 value = title,
                 onValueChange = { title = it },
                 label = { Text("Title") },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                shape = Shapes.extraSmall,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                    unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                    focusedLabelColor = MaterialTheme.colorScheme.primary,
+                    unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant
+                ),
+                singleLine = true
             )
 
             OutlinedTextField(
                 value = description,
                 onValueChange = { description = it },
                 label = { Text("Description") },
-                modifier = Modifier.fillMaxWidth(),
-                minLines = 3
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(120.dp),
+                shape = Shapes.extraSmall,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                    unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                    focusedLabelColor = MaterialTheme.colorScheme.primary,
+                    unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             )
 
             OutlinedTextField(
                 value = contact,
                 onValueChange = { contact = it },
                 label = { Text("Contact Information") },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                shape = Shapes.extraSmall,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                    unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                    focusedLabelColor = MaterialTheme.colorScheme.primary,
+                    unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant
+                ),
+                singleLine = true
             )
 
             OutlinedTextField(
                 value = location,
                 onValueChange = { location = it },
                 label = { Text("Location") },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                shape = Shapes.extraSmall,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                    unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                    focusedLabelColor = MaterialTheme.colorScheme.primary,
+                    unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant
+                ),
+                singleLine = true
             )
 
-            // Image section
-            Column {
-                Text(
-                    text = "Image",
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.padding(bottom = 8.dp)
+            // Image preview
+            if (imageState is ImageState.Success) {
+                val imageBytes = Base64.decode((imageState as ImageState.Success).base64String, Base64.DEFAULT)
+                val bitmap = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
+                Image(
+                    bitmap = bitmap.asImageBitmap(),
+                    contentDescription = "Selected Image",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(200.dp)
                 )
+            }
 
-                when (val currentImageState = imageState) {
-                    is ImageState.Success -> {
-                        val bitmap = try {
-                            val imageBytes = Base64.decode(currentImageState.base64String, Base64.DEFAULT)
-                            BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
-                        } catch (e: Exception) {
-                            null
+            OutlinedButton(
+                onClick = { launcher.launch("image/*") },
+                modifier = Modifier.fillMaxWidth(),
+                shape = Shapes.extraSmall,
+                colors = ButtonDefaults.outlinedButtonColors(
+                    contentColor = MaterialTheme.colorScheme.primary
+                ),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary)
+            ) {
+                Row(
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        when (imageState) {
+                            is ImageState.Success -> "Change Image"
+                            is ImageState.Loading -> "Loading..."
+                            is ImageState.Error -> "Error - Try Again"
+                            else -> "Select Image"
                         }
-                        
-                        if (bitmap != null) {
-                            Image(
-                                bitmap = bitmap.asImageBitmap(),
-                                contentDescription = "Selected image",
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(200.dp)
-                                    .clip(MaterialTheme.shapes.medium),
-                                contentScale = ContentScale.Crop
-                            )
-                            
-                            TextButton(
-                                onClick = { viewModel.resetImageState() },
-                                modifier = Modifier.align(Alignment.End)
-                            ) {
-                                Text("Remove Image")
-                            }
-                        } else {
-                            Text(
-                                text = "Failed to load image",
-                                color = MaterialTheme.colorScheme.error,
-                                modifier = Modifier.padding(vertical = 8.dp)
-                            )
-                            OutlinedButton(
-                                onClick = { imagePicker.launch("image/*") },
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.AddPhotoAlternate,
-                                    contentDescription = null,
-                                    modifier = Modifier.padding(end = 8.dp)
-                                )
-                                Text("Try Again")
-                            }
-                        }
-                    }
-                    is ImageState.Loading -> {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(200.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            CircularProgressIndicator()
-                        }
-                    }
-                    is ImageState.Error -> {
-                        Text(
-                            text = currentImageState.message,
-                            color = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.padding(vertical = 8.dp)
-                        )
-                        OutlinedButton(
-                            onClick = { imagePicker.launch("image/*") },
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.AddPhotoAlternate,
-                                contentDescription = null,
-                                modifier = Modifier.padding(end = 8.dp)
-                            )
-                            Text("Try Again")
-                        }
-                    }
-                    ImageState.NoImage -> {
-                        OutlinedButton(
-                            onClick = { imagePicker.launch("image/*") },
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.AddPhotoAlternate,
-                                contentDescription = null,
-                                modifier = Modifier.padding(end = 8.dp)
-                            )
-                            Text("Add Image")
-                        }
-                    }
+                    )
                 }
             }
 
             Button(
                 onClick = {
-                    viewModel.createLostItem(
-                        title = title,
-                        description = description,
-                        contact = contact,
-                        location = location,
-                        imageBase64 = (imageState as? ImageState.Success)?.base64String ?: ""
-                    )
+                    val base64Image = when (imageState) {
+                        is ImageState.Success -> (imageState as ImageState.Success).base64String
+                        else -> ""
+                    }
+                    viewModel.createLostItem(title, description, contact, location, base64Image)
                 },
+                enabled = title.isNotBlank() && description.isNotBlank() && contact.isNotBlank() && location.isNotBlank(),
                 modifier = Modifier.fillMaxWidth(),
-                enabled = title.isNotBlank() && description.isNotBlank() && contact.isNotBlank() &&
-                         postState !is PostState.Loading
+                shape = Shapes.extraSmall,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary,
+                    disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                    disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             ) {
-                if (postState is PostState.Loading) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(24.dp),
-                        color = MaterialTheme.colorScheme.onPrimary
+                Row(
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        when (postState) {
+                            is PostState.Loading -> "Posting..."
+                            is PostState.Error -> "Error - Try Again"
+                            else -> "Post"
+                        }
                     )
-                } else {
-                    Text("Post")
                 }
+            }
+
+            if (postState is PostState.Error) {
+                Text(
+                    text = (postState as PostState.Error).message,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodyMedium
+                )
             }
         }
     }
-}
-
-private fun validateForm(title: String, description: String, contact: String): Boolean {
-    return title.isNotBlank() && description.isNotBlank() && contact.isNotBlank()
-}
-
-private fun validateForm(): Boolean = true // Placeholder for the above function with real params 
+} 
