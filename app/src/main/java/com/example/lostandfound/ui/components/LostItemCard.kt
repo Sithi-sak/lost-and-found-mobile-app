@@ -1,5 +1,8 @@
 package com.example.lostandfound.ui.components
 
+import android.graphics.BitmapFactory
+import android.util.Base64
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -9,12 +12,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.lostandfound.model.ItemStatus
 import com.example.lostandfound.model.LostItem
-import com.example.lostandfound.ui.theme.LightGray
-import com.example.lostandfound.ui.theme.Shapes
+import com.example.lostandfound.ui.theme.*
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -45,89 +49,113 @@ fun LostItemCard(
             .border(
                 width = 1.dp,
                 color = BorderGrey,
-                shape = Shapes.extraSmall
+                shape = RoundedCornerShape(0.dp)
             ),
-        shape = Shapes.extraSmall,
+        shape = RoundedCornerShape(0.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         colors = CardDefaults.cardColors(
             containerColor = White
         )
     ) {
-        Column(
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp)
+                .padding(12.dp)
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = item.title,
-                    style = MaterialTheme.typography.titleLarge,
-                    color = Color(0xFF212529)  // Laravel dark text color
-                )
+            // Image preview
+            if (item.imageBase64.isNotEmpty()) {
+                val imageBytes = Base64.decode(item.imageBase64, Base64.DEFAULT)
+                val bitmap = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
                 
-                Surface(
-                    color = if (item.status == ItemStatus.LOST) LostRed else FoundGreen,
-                    shape = Shapes.extraSmall,
-                    contentColor = White,
+                Box(
                     modifier = Modifier
-                        .clickable(
-                            enabled = onStatusChange != null,
-                            onClick = {
-                                onStatusChange?.invoke(
-                                    if (item.status == ItemStatus.LOST) ItemStatus.FOUND else ItemStatus.LOST
-                                )
-                            }
-                        )
+                        .size(80.dp)
                 ) {
-                    Text(
-                        text = item.status.name,
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                        style = MaterialTheme.typography.labelMedium
+                    androidx.compose.foundation.Image(
+                        bitmap = bitmap.asImageBitmap(),
+                        contentDescription = "Preview image",
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize()
                     )
                 }
+                Spacer(modifier = Modifier.width(16.dp))
             }
 
-            if (item.description.isNotBlank()) {
-                Text(
-                    text = item.description,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = TextGrey,
-                    modifier = Modifier.padding(top = 8.dp),
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-
-            if (item.numericId > 0) {
-                Text(
-                    text = "#${item.numericId}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = TextGrey,
-                    modifier = Modifier.padding(top = 4.dp)
-                )
-            }
-
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 8.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+            // Content
+            Column(
+                modifier = Modifier.weight(1f)
             ) {
-                Text(
-                    text = "Posted by ${item.username}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = TextGrey
-                )
-                Text(
-                    text = formatDate(item.timestamp),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = TextGrey
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = item.title,
+                        style = MaterialTheme.typography.titleLarge,
+                        color = Color(0xFF212529)  // Laravel dark text color
+                    )
+                    
+                    Surface(
+                        color = if (item.status == ItemStatus.LOST) LostRed else FoundGreen,
+                        shape = Shapes.extraSmall,
+                        contentColor = White,
+                        modifier = Modifier
+                            .clickable(
+                                enabled = onStatusChange != null,
+                                onClick = {
+                                    onStatusChange?.invoke(
+                                        if (item.status == ItemStatus.LOST) ItemStatus.FOUND else ItemStatus.LOST
+                                    )
+                                }
+                            )
+                    ) {
+                        Text(
+                            text = item.status.name,
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                            style = MaterialTheme.typography.labelMedium
+                        )
+                    }
+                }
+
+                if (item.description.isNotBlank()) {
+                    Text(
+                        text = item.description,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = TextGrey,
+                        modifier = Modifier.padding(top = 8.dp),
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+
+                if (item.numericId > 0) {
+                    Text(
+                        text = "#${item.numericId}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = TextGrey,
+                        modifier = Modifier.padding(top = 4.dp)
+                    )
+                }
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Posted by ${item.username}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = TextGrey
+                    )
+                    Text(
+                        text = formatDate(item.timestamp),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = TextGrey
+                    )
+                }
             }
         }
     }

@@ -1,6 +1,7 @@
 package com.example.lostandfound.ui.screens
 
 import android.widget.Toast
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -12,12 +13,16 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.example.lostandfound.model.Message
 import com.example.lostandfound.viewmodel.LostAndFoundViewModel
 import com.example.lostandfound.viewmodel.AuthState
 import com.example.lostandfound.viewmodel.ChatState
+import com.example.lostandfound.ui.theme.*
+import java.text.SimpleDateFormat
+import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -62,8 +67,9 @@ fun ChatScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    titleContentColor = White,
+                    navigationIconContentColor = White
                 )
             )
         }
@@ -93,27 +99,40 @@ fun ChatScreen(
 
             // Message Input
             Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shadowElevation = 8.dp
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .border(
+                        width = 1.dp,
+                        color = BorderGrey,
+                        shape = Shapes.extraSmall
+                    ),
+                color = White,
+                shadowElevation = 0.dp
             ) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                        .padding(12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    TextField(
+                    OutlinedTextField(
                         value = messageText,
                         onValueChange = { messageText = it },
-                        modifier = Modifier.weight(1f),
-                        placeholder = { Text("Type a message...") },
-                        colors = TextFieldDefaults.colors(
-                            unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-                            focusedContainerColor = MaterialTheme.colorScheme.surface
-                        )
+                        modifier = Modifier
+                            .weight(1f)
+                            .border(
+                                width = 1.dp,
+                                color = BorderGrey,
+                                shape = Shapes.extraSmall
+                            ),
+                        placeholder = { Text("Type a message...", color = TextGrey) },
+                        colors = OutlinedTextFieldDefaults.colors(
+                            unfocusedBorderColor = BorderGrey,
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                            cursorColor = MaterialTheme.colorScheme.primary
+                        ),
+                        shape = Shapes.extraSmall
                     )
-                    
-                    Spacer(modifier = Modifier.width(8.dp))
                     
                     IconButton(
                         onClick = {
@@ -121,7 +140,8 @@ fun ChatScreen(
                                 viewModel.sendMessage(chatId, messageText)
                                 messageText = ""
                             }
-                        }
+                        },
+                        modifier = Modifier.padding(start = 8.dp)
                     ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.Send,
@@ -145,17 +165,18 @@ fun MessageBubble(
         contentAlignment = if (isOwnMessage) Alignment.CenterEnd else Alignment.CenterStart
     ) {
         Surface(
-            shape = RoundedCornerShape(
-                topStart = 16.dp,
-                topEnd = 16.dp,
-                bottomStart = if (isOwnMessage) 16.dp else 4.dp,
-                bottomEnd = if (isOwnMessage) 4.dp else 16.dp
-            ),
+            shape = Shapes.extraSmall,
             color = if (isOwnMessage) 
-                MaterialTheme.colorScheme.primary 
+                MaterialTheme.colorScheme.primary
             else 
-                MaterialTheme.colorScheme.surfaceVariant,
-            modifier = Modifier.widthIn(max = 280.dp)
+                LightGray,
+            modifier = Modifier
+                .widthIn(max = 280.dp)
+                .border(
+                    width = 1.dp,
+                    color = if (isOwnMessage) MaterialTheme.colorScheme.primary else BorderGrey,
+                    shape = Shapes.extraSmall
+                )
         ) {
             Column(
                 modifier = Modifier.padding(12.dp)
@@ -165,9 +186,9 @@ fun MessageBubble(
                         text = message.senderName,
                         style = MaterialTheme.typography.labelSmall,
                         color = if (isOwnMessage) 
-                            MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.7f)
+                            White.copy(alpha = 0.7f)
                         else
-                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                            TextGrey
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                 }
@@ -175,9 +196,9 @@ fun MessageBubble(
                 Text(
                     text = message.content,
                     color = if (isOwnMessage) 
-                        MaterialTheme.colorScheme.onPrimary
+                        White
                     else
-                        MaterialTheme.colorScheme.onSurfaceVariant
+                        Color(0xFF212529)
                 )
             }
         }
