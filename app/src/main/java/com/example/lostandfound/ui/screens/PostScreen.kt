@@ -39,6 +39,14 @@ fun PostScreen(
     val context = LocalContext.current
     val postState by viewModel.postState.collectAsState()
     val imageState by viewModel.imageState.collectAsState()
+    val userPhone by viewModel.userPhone.collectAsState()
+
+    // Set initial contact value when userPhone changes
+    LaunchedEffect(userPhone) {
+        if (contact.isEmpty() && userPhone.isNotEmpty()) {
+            contact = userPhone
+        }
+    }
 
     val launcher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()

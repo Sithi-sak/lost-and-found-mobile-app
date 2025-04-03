@@ -12,6 +12,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -33,6 +34,8 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import com.example.lostandfound.ui.theme.Primary
+import com.example.lostandfound.ui.theme.Shapes
 import com.example.lostandfound.viewmodel.AuthState
 import com.example.lostandfound.viewmodel.LostAndFoundViewModel
 import kotlinx.coroutines.launch
@@ -165,6 +168,11 @@ fun SignupScreen(
                         }
                     },
                     modifier = Modifier.fillMaxWidth(),
+                    shape = Shapes.extraSmall,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
+                    ),
                     enabled = email.isNotEmpty() && username.isNotEmpty() && 
                              phoneNumber.isNotEmpty() && password.isNotEmpty() && 
                              confirmPassword.isNotEmpty() && authState !is AuthState.Loading

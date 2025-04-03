@@ -28,6 +28,10 @@ class LostAndFoundViewModel : ViewModel() {
     private val _authState = MutableStateFlow<AuthState>(AuthState.Unauthenticated)
     val authState: StateFlow<AuthState> = _authState.asStateFlow()
     
+    // User phone number state
+    private val _userPhone = MutableStateFlow("")
+    val userPhone: StateFlow<String> = _userPhone.asStateFlow()
+    
     // Form state
     private val _formState = MutableStateFlow<FormState>(FormState.Idle)
     val formState: StateFlow<FormState> = _formState.asStateFlow()
@@ -80,18 +84,30 @@ class LostAndFoundViewModel : ViewModel() {
             try {
                 totalItems = firebaseManager.getTotalItemCount()
                 _totalPages.value = (totalItems + pageSize - 1) / pageSize
+                fetchUserPhone()
             } catch (e: Exception) {
                 Log.e("ViewModel", "Error getting total item count", e)
             }
         }
     }
     
+    private fun fetchUserPhone() {
+        viewModelScope.launch {
+            try {
+                _userPhone.value = firebaseManager.getCurrentUserPhone()
+            } catch (e: Exception) {
+                Log.e("ViewModel", "Error fetching user phone", e)
+            }
+        }
+    }
+    
     private fun checkAuthState() {
         val currentUser = firebaseManager.getCurrentUser()
-        _authState.value = if (currentUser != null) {
-            AuthState.Authenticated(currentUser)
+        if (currentUser != null) {
+            _authState.value = AuthState.Authenticated(currentUser)
+            fetchUserPhone()
         } else {
-            AuthState.Unauthenticated
+            _authState.value = AuthState.Unauthenticated
         }
     }
     

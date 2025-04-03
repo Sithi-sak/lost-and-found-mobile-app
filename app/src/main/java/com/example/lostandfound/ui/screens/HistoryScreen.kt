@@ -23,33 +23,71 @@ fun HistoryScreen(
     onNavigateBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val items by viewModel.items.collectAsState()
+    var userItems by remember { mutableStateOf<List<LostItem>>(emptyList()) }
     val isLoading by viewModel.isLoading.collectAsState()
 
-    // Load user's items when the screen is first displayed
+    // Collect user's items
     LaunchedEffect(Unit) {
-        viewModel.getUserLostItems()
+        viewModel.getUserLostItems().collect { items ->
+            userItems = items
+        }
     }
 
-    Box(modifier = modifier.fillMaxSize()) {
-        if (isLoading) {
-            CircularProgressIndicator(
-                modifier = Modifier.align(Alignment.Center)
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("My Posts") },
+                navigationIcon = {
+                    IconButton(onClick = onNavigateBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                )
             )
-        } else {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
-            ) {
-                items(items) { item ->
-                    LostItemCard(
-                        item = item,
-                        onClick = { onNavigateToDetail(item) },
-                        onStatusChange = { newStatus ->
-                            viewModel.updateItemStatus(item.id, newStatus)
-                        }
+        }
+    ) { padding ->
+        Box(
+            modifier = modifier
+                .fillMaxSize()
+                .padding(padding)
+        ) {
+            if (isLoading) {
+                CircularProgressIndicator(
+                    modifier = Modifier.align(Alignment.Center)
+                )
+            } else if (userItems.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(16.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "You haven't created any posts yet",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(userItems) { item ->
+                        LostItemCard(
+                            item = item,
+                            onClick = { onNavigateToDetail(item) },
+                            onStatusChange = { newStatus ->
+                                viewModel.updateItemStatus(item.id, newStatus)
+                            }
+                        )
+                    }
                 }
             }
         }

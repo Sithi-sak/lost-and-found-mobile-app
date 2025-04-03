@@ -1,5 +1,6 @@
 package com.example.lostandfound.ui.screens
 
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -10,6 +11,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -31,6 +33,10 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import com.example.lostandfound.ui.theme.BorderGrey
+import com.example.lostandfound.ui.theme.Primary
+import com.example.lostandfound.ui.theme.Shapes
+import com.example.lostandfound.ui.theme.White
 import com.example.lostandfound.viewmodel.AuthState
 import com.example.lostandfound.viewmodel.LostAndFoundViewModel
 import kotlinx.coroutines.launch
@@ -111,6 +117,11 @@ fun LoginScreen(
                 Button(
                     onClick = { viewModel.signIn(email, password) },
                     modifier = Modifier.fillMaxWidth(),
+                    shape = Shapes.extraSmall,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
+                    ),
                     enabled = email.isNotEmpty() && password.isNotEmpty() && authState !is AuthState.Loading
                 ) {
                     Text("Login")
