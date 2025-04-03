@@ -48,7 +48,7 @@ class LostAndFoundViewModel : ViewModel() {
     private val _messages = MutableStateFlow<List<Message>>(emptyList())
     val messages: StateFlow<List<Message>> = _messages.asStateFlow()
     
-    private val _postState = MutableStateFlow<PostState>(PostState.Idle)
+    private val _postState = MutableStateFlow<PostState>(PostState.Initial)
     val postState: StateFlow<PostState> = _postState.asStateFlow()
 
     private val _imageState = MutableStateFlow<ImageState>(ImageState.NoImage)
@@ -97,10 +97,10 @@ class LostAndFoundViewModel : ViewModel() {
         }
     }
     
-    fun signUp(email: String, password: String) {
+    fun signUp(email: String, username: String, phoneNumber: String, password: String) {
         _authState.value = AuthState.Loading
         viewModelScope.launch {
-            val result = firebaseManager.signUp(email, password)
+            val result = firebaseManager.signUp(email, username, phoneNumber, password)
             result.fold(
                 onSuccess = { user ->
                     _authState.value = AuthState.Authenticated(user)
@@ -132,28 +132,26 @@ class LostAndFoundViewModel : ViewModel() {
         }
     }
     
-    fun createLostItem(title: String, description: String, contact: String, imageBase64: String = "") {
+    fun createLostItem(
+        title: String,
+        description: String,
+        contact: String,
+        location: String,
+        imageBase64: String
+    ) {
         viewModelScope.launch {
             _postState.value = PostState.Loading
             try {
-                val result = firebaseManager.addLostItem(
+                val itemId = firebaseManager.addLostItem(
                     title = title,
                     description = description,
                     contact = contact,
+                    location = location,
                     imageBase64 = imageBase64
                 )
-                
-                result.fold(
-                    onSuccess = {
-                        _postState.value = PostState.Success
-                        _imageState.value = ImageState.NoImage // Reset image state
-                    },
-                    onFailure = { e ->
-                        _postState.value = PostState.Error(e.message ?: "Error creating post")
-                    }
-                )
+                _postState.value = PostState.Success(itemId)
             } catch (e: Exception) {
-                _postState.value = PostState.Error(e.message ?: "Error creating post")
+                _postState.value = PostState.Error(e.message ?: "Unknown error occurred")
             }
         }
     }
@@ -287,7 +285,7 @@ class LostAndFoundViewModel : ViewModel() {
     }
 
     fun resetPostState() {
-        _postState.value = PostState.Idle
+        _postState.value = PostState.Initial
     }
 }
 
@@ -333,8 +331,8 @@ sealed class ImageState {
 }
 
 sealed class PostState {
-    object Idle : PostState()
-    object Loading : PostState()
-    object Success : PostState()
+    data object Initial : PostState()
+    data object Loading : PostState()
+    data class Success(val id: String) : PostState()
     data class Error(val message: String) : PostState()
 } 

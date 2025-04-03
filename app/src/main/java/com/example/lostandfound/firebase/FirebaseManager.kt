@@ -8,6 +8,7 @@ import android.util.Log
 import com.example.lostandfound.model.Chat
 import com.example.lostandfound.model.LostItem
 import com.example.lostandfound.model.Message
+import com.example.lostandfound.model.User
 import com.example.lostandfound.utils.FirebaseStorageUtils
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
@@ -51,12 +52,39 @@ class FirebaseManager {
     }
     
     // Authentication methods
-    suspend fun signUp(email: String, password: String): Result<FirebaseUser> {
+    suspend fun signUp(email: String, username: String, phoneNumber: String, password: String): Result<FirebaseUser> {
         return try {
+            Log.d("FirebaseManager", "Starting signup process for email: $email")
+            
+            // First create the authentication account
             val authResult = auth.createUserWithEmailAndPassword(email, password).await()
-            Result.success(authResult.user!!)
+            val user = authResult.user!!
+            
+            Log.d("FirebaseManager", "Auth account created for uid: ${user.uid}")
+
+            try {
+                // Create the user document in Firestore with additional info
+                val userDoc = db.collection("users").document(user.uid)
+                val userData = mapOf(
+                    "email" to email,
+                    "username" to username,
+                    "phoneNumber" to phoneNumber,
+                    "createdAt" to System.currentTimeMillis()
+                )
+                
+                Log.d("FirebaseManager", "Creating Firestore document for user: ${user.uid}")
+                userDoc.set(userData).await()
+                Log.d("FirebaseManager", "User document created successfully")
+                
+                Result.success(user)
+            } catch (e: Exception) {
+                // If Firestore document creation fails, delete the auth account
+                Log.e("FirebaseManager", "Error creating user document, deleting auth account", e)
+                user.delete().await()
+                Result.failure(Exception("Failed to create user profile: ${e.message}"))
+            }
         } catch (e: Exception) {
-            Log.e("FirebaseManager", "Error signing up", e)
+            Log.e("FirebaseManager", "Error during signup", e)
             Result.failure(e)
         }
     }
@@ -130,32 +158,32 @@ class FirebaseManager {
         title: String,
         description: String,
         contact: String,
-        imageBase64: String = ""
-    ): Result<String> = withContext(Dispatchers.IO) {
-        try {
-            val currentUser = getCurrentUser()
+        location: String,
+        imageBase64: String
+    ): String {
+        return try {
+            val currentUser = auth.currentUser
             if (currentUser == null) {
-                return@withContext Result.failure(Exception("User not authenticated"))
+                throw Exception("User not authenticated")
             }
 
-            // Get next numeric ID
-            val nextId = getNextNumericId()
-
             val lostItem = LostItem(
+                id = "",
                 title = title,
                 description = description,
                 contact = contact,
+                location = location,
                 userId = currentUser.uid,
-                userEmail = currentUser.email ?: "",
-                username = currentUser.displayName ?: currentUser.email ?: "Anonymous",
                 imageBase64 = imageBase64,
-                numericId = nextId
+                timestamp = System.currentTimeMillis()
             )
 
-            val documentRef = lostItemsCollection.add(lostItem).await()
-            Result.success(documentRef.id)
+            val documentRef = db.collection("lost_items").document()
+            val itemWithId = lostItem.copy(id = documentRef.id)
+            documentRef.set(itemWithId.toMap()).await()
+            documentRef.id
         } catch (e: Exception) {
-            Result.failure(e)
+            throw Exception("Failed to add lost item: ${e.message}")
         }
     }
     
@@ -499,6 +527,38 @@ class FirebaseManager {
         } catch (e: Exception) {
             Log.e("FirebaseManager", "Error converting image to Base64", e)
             Result.failure(e)
+        }
+    }
+
+    // Get user data
+    suspend fun getUserData(userId: String): Result<User> {
+        return try {
+            val userDoc = db.collection("users").document(userId).get().await()
+            if (userDoc.exists()) {
+                val user = userDoc.toObject(User::class.java)
+                if (user != null) {
+                    Result.success(user)
+                } else {
+                    Result.failure(Exception("Failed to parse user data"))
+                }
+            } else {
+                Result.failure(Exception("User not found"))
+            }
+        } catch (e: Exception) {
+            Log.e("FirebaseManager", "Error getting user data", e)
+            Result.failure(e)
+        }
+    }
+
+    // Get current user's phone number
+    suspend fun getCurrentUserPhone(): String {
+        val currentUser = getCurrentUser() ?: return ""
+        return try {
+            val userDoc = db.collection("users").document(currentUser.uid).get().await()
+            userDoc.getString("phoneNumber") ?: ""
+        } catch (e: Exception) {
+            Log.e("FirebaseManager", "Error getting user phone number", e)
+            ""
         }
     }
 } 

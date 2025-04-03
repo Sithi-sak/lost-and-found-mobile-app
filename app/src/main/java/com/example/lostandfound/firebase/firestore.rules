@@ -1,11 +1,16 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    // Users rules
+    match /users/{userId} {
+      allow create: if request.auth != null && request.auth.uid == userId;
+      allow read, update: if request.auth != null;
+    }
+    
     // Lost items rules
     match /lost_items/{itemId} {
       allow read: if true;
-      allow create: if request.auth != null;
-      allow update, delete: if request.auth != null && request.auth.uid == resource.data.userId;
+      allow write: if request.auth != null;
     }
     
     // Chat rules
@@ -19,8 +24,7 @@ service cloud.firestore {
     
     // Counter rules
     match /counters/{counterId} {
-      allow read: if true;
-      allow write: if request.auth != null;
+      allow read, write: if request.auth != null;
     }
   }
 } 

@@ -45,7 +45,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -54,7 +53,6 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.example.lostandfound.viewmodel.FormState
@@ -62,7 +60,6 @@ import com.example.lostandfound.viewmodel.ImageState
 import com.example.lostandfound.viewmodel.ImageUploadState
 import com.example.lostandfound.viewmodel.LostAndFoundViewModel
 import com.example.lostandfound.viewmodel.PostState
-import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -73,6 +70,7 @@ fun PostScreen(
     var title by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
     var contact by remember { mutableStateOf("") }
+    var location by remember { mutableStateOf("") }
     
     val context = LocalContext.current
     val postState by viewModel.postState.collectAsState()
@@ -100,6 +98,7 @@ fun PostScreen(
                 title = ""
                 description = ""
                 contact = ""
+                location = ""
                 viewModel.resetImageState()
                 viewModel.resetPostState()
                 onNavigateBack()
@@ -158,6 +157,13 @@ fun PostScreen(
                 value = contact,
                 onValueChange = { contact = it },
                 label = { Text("Contact Information") },
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            OutlinedTextField(
+                value = location,
+                onValueChange = { location = it },
+                label = { Text("Location") },
                 modifier = Modifier.fillMaxWidth()
             )
 
@@ -264,6 +270,7 @@ fun PostScreen(
                         title = title,
                         description = description,
                         contact = contact,
+                        location = location,
                         imageBase64 = (imageState as? ImageState.Success)?.base64String ?: ""
                     )
                 },

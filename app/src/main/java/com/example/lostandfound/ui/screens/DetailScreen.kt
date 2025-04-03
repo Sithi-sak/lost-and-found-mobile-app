@@ -297,10 +297,13 @@ private fun ItemDetailContent(
                 )
                 
                 Text(
-                    text = "Location data not available yet",
+                    text = if (lostItem.location.isNotBlank()) lostItem.location else "No location provided",
                     style = MaterialTheme.typography.bodyMedium,
                     modifier = Modifier.padding(vertical = 8.dp),
-                    color = MaterialTheme.colorScheme.outline
+                    color = if (lostItem.location.isNotBlank()) 
+                        MaterialTheme.colorScheme.onSurface 
+                    else 
+                        MaterialTheme.colorScheme.outline
                 )
                 
                 Spacer(modifier = Modifier.height(16.dp))

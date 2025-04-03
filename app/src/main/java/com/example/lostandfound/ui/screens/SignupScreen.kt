@@ -8,7 +8,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -43,6 +45,8 @@ fun SignupScreen(
     onSignupSuccess: () -> Unit
 ) {
     var email by remember { mutableStateOf("") }
+    var username by remember { mutableStateOf("") }
+    var phoneNumber by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
     val snackbarHostState = remember { SnackbarHostState() }
@@ -72,6 +76,7 @@ fun SignupScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp)
+                    .verticalScroll(rememberScrollState())
                     .align(Alignment.Center),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
@@ -81,7 +86,20 @@ fun SignupScreen(
                     style = MaterialTheme.typography.headlineMedium,
                     modifier = Modifier.padding(bottom = 24.dp)
                 )
+
+                OutlinedTextField(
+                    value = username,
+                    onValueChange = { username = it },
+                    label = { Text("Username") },
+                    modifier = Modifier.fillMaxWidth(),
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Text,
+                        imeAction = ImeAction.Next
+                    )
+                )
                 
+                Spacer(modifier = Modifier.height(16.dp))
+
                 OutlinedTextField(
                     value = email,
                     onValueChange = { email = it },
@@ -89,6 +107,19 @@ fun SignupScreen(
                     modifier = Modifier.fillMaxWidth(),
                     keyboardOptions = KeyboardOptions(
                         keyboardType = KeyboardType.Email,
+                        imeAction = ImeAction.Next
+                    )
+                )
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                OutlinedTextField(
+                    value = phoneNumber,
+                    onValueChange = { phoneNumber = it },
+                    label = { Text("Phone Number") },
+                    modifier = Modifier.fillMaxWidth(),
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Phone,
                         imeAction = ImeAction.Next
                     )
                 )
@@ -126,7 +157,7 @@ fun SignupScreen(
                 Button(
                     onClick = {
                         if (password == confirmPassword) {
-                            viewModel.signUp(email, password)
+                            viewModel.signUp(email, username, phoneNumber, password)
                         } else {
                             scope.launch {
                                 snackbarHostState.showSnackbar("Passwords do not match")
@@ -134,8 +165,9 @@ fun SignupScreen(
                         }
                     },
                     modifier = Modifier.fillMaxWidth(),
-                    enabled = email.isNotEmpty() && password.isNotEmpty() && 
-                            confirmPassword.isNotEmpty() && authState !is AuthState.Loading
+                    enabled = email.isNotEmpty() && username.isNotEmpty() && 
+                             phoneNumber.isNotEmpty() && password.isNotEmpty() && 
+                             confirmPassword.isNotEmpty() && authState !is AuthState.Loading
                 ) {
                     Text("Sign Up")
                 }

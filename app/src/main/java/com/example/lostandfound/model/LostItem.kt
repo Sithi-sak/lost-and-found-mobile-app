@@ -15,7 +15,8 @@ data class LostItem(
     val username: String = "",
     val timestamp: Long = System.currentTimeMillis(),
     val imageBase64: String = "",
-    val numericId: Long = 0 // Numeric ID for alternate indexing
+    val numericId: Long = 0, // Numeric ID for alternate indexing
+    val location: String = "" // Location description
 ) {
     @Exclude
     fun toMap(): Map<String, Any?> {
@@ -28,7 +29,8 @@ data class LostItem(
             "username" to username,
             "timestamp" to timestamp,
             "imageBase64" to imageBase64,
-            "numericId" to numericId
+            "numericId" to numericId,
+            "location" to location
         )
     }
 } 
