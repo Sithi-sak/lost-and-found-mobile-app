@@ -3,19 +3,17 @@ package com.example.lostandfound.ui.screens
 import android.content.Intent
 import android.graphics.BitmapFactory
 import android.net.Uri
+import android.util.Base64
 import android.widget.Toast
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -23,7 +21,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Chat
-import androidx.compose.material.icons.automirrored.filled.Message
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Email
@@ -52,10 +49,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import coil.compose.AsyncImage
-import coil.request.ImageRequest
 import com.example.lostandfound.model.LostItem
 import com.example.lostandfound.viewmodel.AuthState
 import com.example.lostandfound.viewmodel.DetailState
@@ -63,8 +57,6 @@ import com.example.lostandfound.viewmodel.LostAndFoundViewModel
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import android.util.Base64
-import android.graphics.Bitmap
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -369,36 +361,6 @@ private fun ItemDetailContent(
                         )
                         Text("Chat")
                     }
-                }
-                
-                // Second row - Email
-                OutlinedButton(
-                    onClick = {
-                        try {
-                            val emailAddress = if (lostItem.userEmail.isNotEmpty()) 
-                                                lostItem.userEmail 
-                                              else 
-                                                lostItem.contact
-                            
-                            val intent = Intent(Intent.ACTION_SENDTO).apply {
-                                data = Uri.parse("mailto:")
-                                putExtra(Intent.EXTRA_EMAIL, arrayOf(emailAddress))
-                                putExtra(Intent.EXTRA_SUBJECT, "About your lost item: ${lostItem.title}")
-                                putExtra(Intent.EXTRA_TEXT, "Hi, I'm contacting you regarding your lost item listing on the Lost and Found app.")
-                            }
-                            context.startActivity(intent)
-                        } catch (e: Exception) {
-                            Toast.makeText(context, "No email app found", Toast.LENGTH_SHORT).show()
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Email,
-                        contentDescription = null,
-                        modifier = Modifier.padding(end = 8.dp)
-                    )
-                    Text("Email")
                 }
             }
         }

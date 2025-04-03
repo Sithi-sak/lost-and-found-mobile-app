@@ -54,26 +54,73 @@ sealed class Screen(val route: String) {
     object Profile : Screen("profile")
     object Chat : Screen("chat/{chatId}")
     object ChatList : Screen("chats")
+
+    fun createRoute(itemId: String): String {
+        return "detail/$itemId"
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AppNavigation(viewModel: LostAndFoundViewModel) {
+fun AppNavigation(
+    viewModel: LostAndFoundViewModel,
+    modifier: Modifier = Modifier
+) {
     val navController = rememberNavController()
     val authState by viewModel.authState.collectAsState()
-    
+
     NavHost(
         navController = navController,
-        startDestination = if (authState is AuthState.Authenticated) Screen.Browse.route else Screen.Login.route
+        startDestination = if (authState is AuthState.Authenticated) Screen.Browse.route else Screen.Login.route,
+        modifier = modifier
     ) {
         composable(Screen.Login.route) {
             LoginScreen(
                 viewModel = viewModel,
                 authState = authState,
                 onNavigateToSignUp = { navController.navigate(Screen.Signup.route) },
-                onLoginSuccess = { navController.navigate(Screen.Browse.route) {
-                    popUpTo(Screen.Login.route) { inclusive = true }
-                }}
+                onLoginSuccess = {
+                    navController.navigate(Screen.Browse.route) {
+                        popUpTo(Screen.Login.route) { inclusive = true }
+                    }
+                }
+            )
+        }
+
+        composable(Screen.Browse.route) {
+            MainScaffold(
+                navController = navController,
+                viewModel = viewModel,
+                currentRoute = Screen.Browse.route
+            ) { paddingModifier ->
+                BrowseScreen(
+                    modifier = paddingModifier,
+                    viewModel = viewModel,
+                    onNavigateToDetail = { item ->
+                        navController.navigate(Screen.Detail.createRoute(item.id))
+                    },
+                    onNavigateToPost = { navController.navigate(Screen.Post.route) },
+                    onNavigateToHistory = { navController.navigate(Screen.History.route) },
+                    onNavigateToSettings = { navController.navigate(Screen.Settings.route) },
+                    onLogout = {
+                        viewModel.signOut()
+                        navController.navigate(Screen.Login.route) {
+                            popUpTo(navController.graph.findStartDestination().id) {
+                                inclusive = true
+                            }
+                        }
+                    }
+                )
+            }
+        }
+
+        composable(Screen.History.route) {
+            HistoryScreen(
+                viewModel = viewModel,
+                onNavigateToDetail = { item ->
+                    navController.navigate(Screen.Detail.createRoute(item.id))
+                },
+                onNavigateBack = { navController.popBackStack() }
             )
         }
         
@@ -88,75 +135,10 @@ fun AppNavigation(viewModel: LostAndFoundViewModel) {
             )
         }
         
-        composable(Screen.Browse.route) {
-            MainScaffold(
-                navController = navController,
-                viewModel = viewModel,
-                currentRoute = Screen.Browse.route
-            ) { modifier ->
-                BrowseScreen(
-                    modifier = modifier,
-                    viewModel = viewModel,
-                    onNavigateToDetail = { lostItem ->
-                        try {
-                            navController.navigate(Screen.Detail.route.replace("{itemId}", lostItem.id))
-                        } catch (e: Exception) {
-                            // Handle error
-                            Log.e("AppNavigation", "Error navigating to detail", e)
-                        }
-                    },
-                    onNavigateToPost = { 
-                        navController.navigate(Screen.Post.route)
-                    },
-                    onNavigateToHistory = {
-                        navController.navigate(Screen.History.route)
-                    },
-                    onNavigateToSettings = {
-                        navController.navigate(Screen.Settings.route)
-                    },
-                    onLogout = {
-                        viewModel.signOut()
-                        navController.navigate(Screen.Login.route) {
-                            popUpTo(navController.graph.findStartDestination().id) {
-                                inclusive = true
-                            }
-                        }
-                    }
-                )
-            }
-        }
-        
         composable(Screen.Post.route) {
             PostScreen(
                 viewModel = viewModel,
                 onNavigateBack = { navController.popBackStack() }
-            )
-        }
-        
-        composable(Screen.History.route) {
-            // Check if user is authenticated
-            val isAuthenticated = (viewModel.authState.collectAsState().value is AuthState.Authenticated)
-            
-            HistoryScreen(
-                viewModel = viewModel,
-                onNavigateToDetail = { lostItem ->
-                    try {
-                        navController.navigate(Screen.Detail.route.replace("{itemId}", lostItem.id))
-                    } catch (e: Exception) {
-                        // Handle error
-                        Log.e("AppNavigation", "Error navigating to detail", e)
-                    }
-                },
-                onNavigateToPost = { 
-                    navController.navigate(Screen.Post.route) 
-                },
-                onNavigateBack = { 
-                    try {
-                        navController.popBackStack()
-                    } catch (e: Exception) {
-                        Log.e("AppNavigation", "Error navigating back", e)
-                    }
-                }
             )
         }
         

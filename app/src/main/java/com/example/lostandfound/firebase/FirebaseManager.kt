@@ -6,6 +6,7 @@ import android.net.Uri
 import android.util.Base64
 import android.util.Log
 import com.example.lostandfound.model.Chat
+import com.example.lostandfound.model.ItemStatus
 import com.example.lostandfound.model.LostItem
 import com.example.lostandfound.model.Message
 import com.example.lostandfound.model.User
@@ -16,16 +17,15 @@ import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 import com.google.firebase.storage.FirebaseStorage
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
 import java.io.InputStream
 import java.util.UUID
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-import kotlinx.coroutines.launch
 
 class FirebaseManager {
     private val auth = FirebaseAuth.getInstance()
@@ -559,6 +559,50 @@ class FirebaseManager {
         } catch (e: Exception) {
             Log.e("FirebaseManager", "Error getting user phone number", e)
             ""
+        }
+    }
+
+    suspend fun getLostItems(startIndex: Int, pageSize: Int): List<LostItem> {
+        return try {
+            val snapshot = db.collection("lost_items")
+                .orderBy("timestamp", Query.Direction.DESCENDING)
+                .get()
+                .await()
+
+            // Get all items and then manually paginate
+            val allItems = snapshot.documents.mapNotNull { doc ->
+                doc.toObject(LostItem::class.java)?.copy(id = doc.id)
+            }
+
+            // Return the requested page of items
+            allItems.drop(startIndex).take(pageSize)
+        } catch (e: Exception) {
+            Log.e("FirebaseManager", "Error getting lost items", e)
+            emptyList()
+        }
+    }
+
+    suspend fun getTotalItemCount(): Int {
+        return try {
+            val snapshot = db.collection("lost_items")
+                .get()
+                .await()
+            snapshot.size()
+        } catch (e: Exception) {
+            Log.e("FirebaseManager", "Error getting total item count", e)
+            0
+        }
+    }
+
+    suspend fun updateItemStatus(itemId: String, newStatus: ItemStatus) {
+        try {
+            db.collection("lost_items")
+                .document(itemId)
+                .update("status", newStatus.name)
+                .await()
+        } catch (e: Exception) {
+            Log.e("FirebaseManager", "Error updating item status", e)
+            throw e
         }
     }
 } 

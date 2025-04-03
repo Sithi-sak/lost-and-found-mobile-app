@@ -4,6 +4,11 @@ import com.google.firebase.firestore.DocumentId
 import com.google.firebase.firestore.Exclude
 import com.google.firebase.firestore.IgnoreExtraProperties
 
+enum class ItemStatus {
+    LOST,
+    FOUND
+}
+
 @IgnoreExtraProperties
 data class LostItem(
     @DocumentId val id: String = "",
@@ -16,7 +21,8 @@ data class LostItem(
     val timestamp: Long = System.currentTimeMillis(),
     val imageBase64: String = "",
     val numericId: Long = 0, // Numeric ID for alternate indexing
-    val location: String = "" // Location description
+    val location: String = "", // Location description
+    val status: ItemStatus = ItemStatus.LOST // Default status is LOST
 ) {
     @Exclude
     fun toMap(): Map<String, Any?> {
@@ -30,7 +36,8 @@ data class LostItem(
             "timestamp" to timestamp,
             "imageBase64" to imageBase64,
             "numericId" to numericId,
-            "location" to location
+            "location" to location,
+            "status" to status.name // Store enum as string
         )
     }
 } 

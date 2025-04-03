@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.lostandfound.firebase.FirebaseManager
 import com.example.lostandfound.model.Chat
+import com.example.lostandfound.model.ItemStatus
 import com.example.lostandfound.model.LostItem
 import com.example.lostandfound.model.Message
 import com.google.firebase.auth.FirebaseUser
@@ -15,6 +16,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.io.InputStream
 
@@ -54,8 +56,34 @@ class LostAndFoundViewModel : ViewModel() {
     private val _imageState = MutableStateFlow<ImageState>(ImageState.NoImage)
     val imageState: StateFlow<ImageState> = _imageState.asStateFlow()
     
+    private val _items = MutableStateFlow<List<LostItem>>(emptyList())
+    val items = _items.asStateFlow()
+
+    private val _isLoading = MutableStateFlow(false)
+    val isLoading = _isLoading.asStateFlow()
+
+    private val _hasMoreItems = MutableStateFlow(true)
+    val hasMoreItems = _hasMoreItems.asStateFlow()
+
+    private val _currentPage = MutableStateFlow(1)
+    val currentPage = _currentPage.asStateFlow()
+
+    private val _totalPages = MutableStateFlow(1)
+    val totalPages = _totalPages.asStateFlow()
+
+    private val pageSize = 10
+    private var totalItems = 0
+    
     init {
         checkAuthState()
+        viewModelScope.launch {
+            try {
+                totalItems = firebaseManager.getTotalItemCount()
+                _totalPages.value = (totalItems + pageSize - 1) / pageSize
+            } catch (e: Exception) {
+                Log.e("ViewModel", "Error getting total item count", e)
+            }
+        }
     }
     
     private fun checkAuthState() {
@@ -286,6 +314,72 @@ class LostAndFoundViewModel : ViewModel() {
 
     fun resetPostState() {
         _postState.value = PostState.Initial
+    }
+
+    fun loadMoreItems() {
+        viewModelScope.launch {
+            _isLoading.value = true
+            try {
+                // First get total count to update pages
+                totalItems = firebaseManager.getTotalItemCount()
+                _totalPages.value = (totalItems + pageSize - 1) / pageSize
+
+                // Then load the current page
+                val startIndex = (_currentPage.value - 1) * pageSize
+                val items = firebaseManager.getLostItems(startIndex, pageSize)
+                _items.value = items
+            } catch (e: Exception) {
+                Log.e("ViewModel", "Error loading items", e)
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
+
+    fun nextPage() {
+        if (_currentPage.value < _totalPages.value) {
+            _currentPage.value += 1
+            loadMoreItems()
+        }
+    }
+
+    fun previousPage() {
+        if (_currentPage.value > 1) {
+            _currentPage.value -= 1
+            loadMoreItems()
+        }
+    }
+
+    fun refreshItems() {
+        viewModelScope.launch {
+            _isLoading.value = true
+            _currentPage.value = 1
+            _items.value = emptyList()
+            try {
+                totalItems = firebaseManager.getTotalItemCount()
+                _totalPages.value = (totalItems + pageSize - 1) / pageSize
+                loadMoreItems()
+            } catch (e: Exception) {
+                Log.e("ViewModel", "Error refreshing items", e)
+                _isLoading.value = false
+            }
+        }
+    }
+
+    fun updateItemStatus(itemId: String, newStatus: ItemStatus) {
+        viewModelScope.launch {
+            try {
+                firebaseManager.updateItemStatus(itemId, newStatus)
+                // Update local state
+                _items.update { currentItems ->
+                    currentItems.map { item ->
+                        if (item.id == itemId) item.copy(status = newStatus) else item
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("ViewModel", "Error updating item status", e)
+            }
+        }
     }
 }
 
