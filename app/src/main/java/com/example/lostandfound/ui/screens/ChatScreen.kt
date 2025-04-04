@@ -5,6 +5,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -21,6 +22,7 @@ import com.example.lostandfound.viewmodel.LostAndFoundViewModel
 import com.example.lostandfound.viewmodel.AuthState
 import com.example.lostandfound.viewmodel.ChatState
 import com.example.lostandfound.ui.theme.*
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -37,12 +39,27 @@ fun ChatScreen(
     val currentUser = (authState as? AuthState.Authenticated)?.user
     val chatState by viewModel.chatState.collectAsState()
     val context = LocalContext.current
+    
+    // Create a LazyListState to control scrolling
+    val listState = rememberLazyListState()
+    val coroutineScope = rememberCoroutineScope()
+    
+    // Sort messages by timestamp
+    val sortedMessages = messages.sortedBy { it.timestamp }
 
+    // Collect messages and scroll to bottom when new messages arrive
     LaunchedEffect(chatId) {
         viewModel.getChatMessages(chatId)
         viewModel.messages.collect { newMessages ->
             messages.clear()
             messages.addAll(newMessages)
+            
+            // Scroll to the latest message
+            if (newMessages.isNotEmpty()) {
+                coroutineScope.launch {
+                    listState.animateScrollToItem(newMessages.size - 1)
+                }
+            }
         }
     }
 
@@ -81,13 +98,14 @@ fun ChatScreen(
         ) {
             // Messages List
             LazyColumn(
+                state = listState,
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp),
-                reverseLayout = true
+                contentPadding = PaddingValues(vertical = 16.dp)
             ) {
-                items(messages) { message ->
+                items(sortedMessages) { message ->
                     val isOwnMessage = message.senderId == currentUser?.uid
                     MessageBubble(
                         message = message,
@@ -139,6 +157,13 @@ fun ChatScreen(
                             if (messageText.isNotBlank()) {
                                 viewModel.sendMessage(chatId, messageText)
                                 messageText = ""
+                                
+                                // Scroll to bottom after sending message
+                                coroutineScope.launch {
+                                    // Small delay to ensure the new message is added
+                                    kotlinx.coroutines.delay(100)
+                                    listState.animateScrollToItem(messages.size)
+                                }
                             }
                         },
                         modifier = Modifier.padding(start = 8.dp)
