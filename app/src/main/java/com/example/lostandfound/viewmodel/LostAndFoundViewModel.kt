@@ -87,7 +87,7 @@ class LostAndFoundViewModel : ViewModel() {
     private val _totalPages = MutableStateFlow(1)
     val totalPages = _totalPages.asStateFlow()
 
-    private val pageSize = 10
+    private val pageSize = 5
     private var totalItems = 0
     
     init {
@@ -157,6 +157,9 @@ class LostAndFoundViewModel : ViewModel() {
             result.fold(
                 onSuccess = { user ->
                     _authState.value = AuthState.Authenticated(user)
+                    // Fetch user data after successful authentication
+                    fetchUserPhone()
+                    fetchUserName()
                 },
                 onFailure = { exception ->
                     _authState.value = AuthState.Error(exception.message ?: "Authentication failed")
@@ -172,6 +175,9 @@ class LostAndFoundViewModel : ViewModel() {
             result.fold(
                 onSuccess = { user ->
                     _authState.value = AuthState.Authenticated(user)
+                    // Set username and phone directly since we know them
+                    _userName.value = username
+                    _userPhone.value = phoneNumber
                 },
                 onFailure = { exception ->
                     _authState.value = AuthState.Error(exception.message ?: "Registration failed")
@@ -183,6 +189,9 @@ class LostAndFoundViewModel : ViewModel() {
     fun signOut() {
         firebaseManager.signOut()
         _authState.value = AuthState.Unauthenticated
+        // Clear user data
+        _userName.value = ""
+        _userPhone.value = ""
     }
     
     fun uploadImage(imageUri: Uri) {

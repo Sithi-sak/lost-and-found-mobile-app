@@ -55,10 +55,12 @@ import com.example.lostandfound.ui.theme.Shapes
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.foundation.gestures.detectTapGestures
 import kotlinx.coroutines.launch
-import com.google.accompanist.swiperefresh.SwipeRefresh
-import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
+import androidx.compose.material.pullrefresh.PullRefreshIndicator
+import androidx.compose.material.pullrefresh.pullRefresh
+import androidx.compose.material.pullrefresh.rememberPullRefreshState
+import androidx.compose.material.ExperimentalMaterialApi
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterialApi::class)
 @Composable
 fun BrowseScreen(
     viewModel: LostAndFoundViewModel,
@@ -76,9 +78,22 @@ fun BrowseScreen(
     var showSettingsMenu by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
     
-    // SwipeRefresh state
-    val swipeRefreshState = rememberSwipeRefreshState(isRefreshing = isLoading)
-
+    // Pull-to-refresh state
+    var refreshing by remember { mutableStateOf(false) }
+    val pullRefreshState = rememberPullRefreshState(refreshing, { 
+        refreshing = true
+        coroutineScope.launch {
+            viewModel.refreshItems()
+        }
+    })
+    
+    // Track loading state
+    LaunchedEffect(isLoading) {
+        if (!isLoading && refreshing) {
+            refreshing = false
+        }
+    }
+    
     // Load initial items when the screen is first displayed
     LaunchedEffect(Unit) {
         if (items.isEmpty()) {
@@ -172,56 +187,61 @@ fun BrowseScreen(
             }
         }
     ) { padding ->
-        SwipeRefresh(
-            state = swipeRefreshState,
-            onRefresh = {
-                coroutineScope.launch {
-                    viewModel.refreshItems()
-                }
-            },
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
+                .pullRefresh(pullRefreshState)
         ) {
-            Box(
-                modifier = Modifier.fillMaxSize()
-            ) {
-                if (items.isEmpty() && !isLoading) {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text("No items found. Be the first to post!")
-                    }
-                } else {
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
-                    ) {
-                        items(items) { item ->
-                            LostItemCard(
-                                item = item,
-                                onClick = { onNavigateToDetail(item) },
-                                onStatusChange = { newStatus ->
-                                    viewModel.updateItemStatus(item.id, newStatus)
-                                }
-                            )
-                        }
-                    }
+            if (items.isEmpty() && !isLoading) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("No items found. Be the first to post!")
                 }
-
-                // Show loading indicator only during initial load
-                if (isLoading && items.isEmpty()) {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(32.dp)
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(
+                        start = 16.dp, 
+                        end = 16.dp, 
+                        top = 8.dp, 
+                        bottom = 80.dp  // Increased bottom padding to account for navigation bar
+                    ),
+                ) {
+                    items(items) { item ->
+                        LostItemCard(
+                            item = item,
+                            onClick = { onNavigateToDetail(item) },
+                            onStatusChange = { newStatus ->
+                                viewModel.updateItemStatus(item.id, newStatus)
+                            }
                         )
                     }
                 }
             }
+
+            // Show loading indicator only during initial load
+            if (isLoading && items.isEmpty()) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(32.dp)
+                    )
+                }
+            }
+            
+            // Pull refresh indicator
+            PullRefreshIndicator(
+                refreshing = refreshing, 
+                state = pullRefreshState,
+                modifier = Modifier.align(Alignment.TopCenter),
+                backgroundColor = MaterialTheme.colorScheme.surface,
+                contentColor = MaterialTheme.colorScheme.primary
+            )
         }
     }
-} 
+}

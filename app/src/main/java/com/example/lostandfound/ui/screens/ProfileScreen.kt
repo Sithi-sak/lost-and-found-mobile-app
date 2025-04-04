@@ -1,5 +1,6 @@
 package com.example.lostandfound.ui.screens
 
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -72,6 +73,7 @@ fun ProfileScreen(
         "Not signed in"
     }
     val userName by viewModel.userName.collectAsState()
+    Log.d("ProfileScreen", "Username from ViewModel: $userName")
     val userPhone by viewModel.userPhone.collectAsState()
     val profileUpdateState by viewModel.profileUpdateState.collectAsState()
     

@@ -14,11 +14,13 @@ import androidx.compose.ui.unit.dp
 import com.example.lostandfound.model.LostItem
 import com.example.lostandfound.ui.components.LostItemCard
 import com.example.lostandfound.viewmodel.LostAndFoundViewModel
-import com.google.accompanist.swiperefresh.SwipeRefresh
-import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
 import kotlinx.coroutines.launch
+import androidx.compose.material.pullrefresh.PullRefreshIndicator
+import androidx.compose.material.pullrefresh.pullRefresh
+import androidx.compose.material.pullrefresh.rememberPullRefreshState
+import androidx.compose.material.ExperimentalMaterialApi
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterialApi::class)
 @Composable
 fun HistoryScreen(
     viewModel: LostAndFoundViewModel,
@@ -30,9 +32,17 @@ fun HistoryScreen(
     val isLoading by viewModel.isLoading.collectAsState()
     val coroutineScope = rememberCoroutineScope()
     
-    // SwipeRefresh state
-    val swipeRefreshState = rememberSwipeRefreshState(isRefreshing = isLoading)
+    // Define refreshTrigger
     val refreshTrigger = remember { mutableStateOf(0) }
+    
+    // Pull-to-refresh state
+    var refreshing by remember { mutableStateOf(false) }
+    val pullRefreshState = rememberPullRefreshState(refreshing, { 
+        refreshing = true
+        coroutineScope.launch {
+            refreshTrigger.value += 1
+        }
+    })
     
     // Collect user's items
     LaunchedEffect(refreshTrigger.value) {
@@ -40,61 +50,67 @@ fun HistoryScreen(
             userItems = items
         }
     }
+    
+    // Track loading state
+    LaunchedEffect(isLoading) {
+        if (!isLoading && refreshing) {
+            refreshing = false
+        }
+    }
 
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("My Posts") },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                    }
-                },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
                     titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                )
+                ),
             )
         }
     ) { padding ->
-        SwipeRefresh(
-            state = swipeRefreshState,
-            onRefresh = {
-                coroutineScope.launch {
-                    refreshTrigger.value += 1
-                }
-            },
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
+                .pullRefresh(pullRefreshState),
+            contentAlignment = Alignment.TopCenter
         ) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                if (isLoading && userItems.isEmpty()) {
-                    CircularProgressIndicator()
-                } else if (userItems.isEmpty()) {
-                    Text("You haven't posted any items yet")
-                } else {
-                    LazyColumn(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 12.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        items(userItems) { item ->
-                            LostItemCard(
-                                item = item,
-                                onClick = { onNavigateToDetail(item) },
-                                onStatusChange = { newStatus ->
-                                    viewModel.updateItemStatus(item.id, newStatus)
-                                }
-                            )
-                        }
+            if (isLoading && userItems.isEmpty()) {
+                CircularProgressIndicator()
+            } else if (userItems.isEmpty()) {
+                Text("You haven't posted any items yet")
+            } else {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize(),
+                    contentPadding = PaddingValues(
+                        start = 16.dp, 
+                        end = 16.dp, 
+                        top = 12.dp, 
+                        bottom = 90.dp  // Increased bottom padding to account for navigation bar
+                    ),
+                ) {
+                    items(userItems) { item ->
+                        LostItemCard(
+                            item = item,
+                            onClick = { onNavigateToDetail(item) },
+                            onStatusChange = { newStatus ->
+                                viewModel.updateItemStatus(item.id, newStatus)
+                            }
+                        )
                     }
                 }
             }
+            
+            // Pull refresh indicator
+            PullRefreshIndicator(
+                refreshing = refreshing, 
+                state = pullRefreshState,
+                modifier = Modifier.align(Alignment.TopCenter),
+                backgroundColor = MaterialTheme.colorScheme.surface,
+                contentColor = MaterialTheme.colorScheme.primary
+            )
         }
     }
 } 

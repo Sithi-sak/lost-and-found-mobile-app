@@ -54,7 +54,7 @@ class FirebaseManager {
     // Authentication methods
     suspend fun signUp(email: String, username: String, phoneNumber: String, password: String): Result<FirebaseUser> {
         return try {
-            Log.d("FirebaseManager", "Starting signup process for email: $email")
+            Log.d("FirebaseManager", "Starting signup process for email: $email with username: $username")
             
             // First create the authentication account
             val authResult = auth.createUserWithEmailAndPassword(email, password).await()
@@ -72,9 +72,9 @@ class FirebaseManager {
                     "createdAt" to System.currentTimeMillis()
                 )
                 
-                Log.d("FirebaseManager", "Creating Firestore document for user: ${user.uid}")
+                Log.d("FirebaseManager", "Creating Firestore document for user: ${user.uid} with username: $username")
                 userDoc.set(userData).await()
-                Log.d("FirebaseManager", "User document created successfully")
+                Log.d("FirebaseManager", "User document created successfully with username: $username")
                 
                 Result.success(user)
             } catch (e: Exception) {
@@ -167,10 +167,19 @@ class FirebaseManager {
                 throw Exception("User not authenticated")
             }
 
+            Log.d("FirebaseManager", "Adding lost item for user: ${currentUser.uid}")
+            
             // Get the user's username from their profile
             val userDoc = db.collection("users").document(currentUser.uid).get().await()
-            val username = userDoc.getString("username") ?: "Unknown"
+            
+            if (!userDoc.exists()) {
+                Log.e("FirebaseManager", "addLostItem: User document does not exist")
+            }
+            
+            val username = userDoc.getString("username")
             val userEmail = currentUser.email ?: ""
+            
+            Log.d("FirebaseManager", "addLostItem: Retrieved username from Firestore: $username")
 
             val lostItem = LostItem(
                 id = "",
@@ -180,16 +189,22 @@ class FirebaseManager {
                 location = location,
                 userId = currentUser.uid,
                 userEmail = userEmail,
-                username = username,
+                username = username ?: "Unknown",
                 imageBase64 = imageBase64,
                 timestamp = System.currentTimeMillis()
             )
+            
+            Log.d("FirebaseManager", "addLostItem: Created LostItem with username: ${lostItem.username}")
 
             val documentRef = db.collection("lost_items").document()
             val itemWithId = lostItem.copy(id = documentRef.id)
             documentRef.set(itemWithId.toMap()).await()
+            
+            Log.d("FirebaseManager", "addLostItem: Saved item with username: ${itemWithId.username}")
+            
             documentRef.id
         } catch (e: Exception) {
+            Log.e("FirebaseManager", "Failed to add lost item: ${e.message}", e)
             throw Exception("Failed to add lost item: ${e.message}")
         }
     }
@@ -415,10 +430,20 @@ class FirebaseManager {
             val currentUser = auth.currentUser ?: throw Exception("User not authenticated")
             Log.d("FirebaseManager", "Sending message in chat: $chatId")
             
+            // Get username from Firestore if possible
+            val userDoc = db.collection("users").document(currentUser.uid).get().await()
+            val username = if (userDoc.exists()) {
+                userDoc.getString("username") ?: currentUser.displayName
+            } else {
+                currentUser.displayName
+            } ?: currentUser.email ?: "Unknown"
+            
+            Log.d("FirebaseManager", "Sending message with sender name: $username")
+            
             val message = Message(
                 chatId = chatId,
                 senderId = currentUser.uid,
-                senderName = currentUser.displayName ?: currentUser.email ?: "Unknown",
+                senderName = username,
                 content = content,
                 timestamp = System.currentTimeMillis()
             )
@@ -571,10 +596,27 @@ class FirebaseManager {
 
     // Get current user's username
     suspend fun getCurrentUsername(): String {
-        val currentUser = getCurrentUser() ?: return ""
+        val currentUser = getCurrentUser()
+        
+        if (currentUser == null) {
+            Log.e("FirebaseManager", "getCurrentUsername: Current user is null")
+            return ""
+        }
+        
+        Log.d("FirebaseManager", "getCurrentUsername: Getting username for user ${currentUser.uid}")
+        
         return try {
             val userDoc = db.collection("users").document(currentUser.uid).get().await()
-            userDoc.getString("username") ?: ""
+            
+            if (!userDoc.exists()) {
+                Log.e("FirebaseManager", "getCurrentUsername: User document does not exist")
+                return ""
+            }
+            
+            val username = userDoc.getString("username")
+            Log.d("FirebaseManager", "getCurrentUsername: Username from Firestore: $username")
+            
+            username ?: ""
         } catch (e: Exception) {
             Log.e("FirebaseManager", "Error getting username", e)
             ""

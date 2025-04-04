@@ -164,43 +164,63 @@ fun MessageBubble(
         modifier = Modifier.fillMaxWidth(),
         contentAlignment = if (isOwnMessage) Alignment.CenterEnd else Alignment.CenterStart
     ) {
-        Surface(
-            shape = Shapes.extraSmall,
-            color = if (isOwnMessage) 
-                MaterialTheme.colorScheme.primary
-            else 
-                LightGray,
-            modifier = Modifier
-                .widthIn(max = 280.dp)
-                .border(
-                    width = 1.dp,
-                    color = if (isOwnMessage) MaterialTheme.colorScheme.primary else BorderGrey,
-                    shape = Shapes.extraSmall
-                )
+        Column(
+            modifier = Modifier.padding(vertical = 4.dp),
+            horizontalAlignment = if (isOwnMessage) Alignment.End else Alignment.Start
         ) {
-            Column(
-                modifier = Modifier.padding(12.dp)
+            // Always show sender name above the message
+            Text(
+                text = if (isOwnMessage) "You" else message.senderName,
+                style = MaterialTheme.typography.labelSmall,
+                color = TextGrey,
+                modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+            )
+            
+            Surface(
+                shape = Shapes.extraSmall,
+                color = if (isOwnMessage) 
+                    MaterialTheme.colorScheme.primary
+                else 
+                    LightGray,
+                modifier = Modifier
+                    .widthIn(max = 280.dp)
+                    .border(
+                        width = 1.dp,
+                        color = if (isOwnMessage) MaterialTheme.colorScheme.primary else BorderGrey,
+                        shape = Shapes.extraSmall
+                    )
             ) {
-                if (!isOwnMessage) {
+                Column(
+                    modifier = Modifier.padding(12.dp)
+                ) {
                     Text(
-                        text = message.senderName,
+                        text = message.content,
+                        color = if (isOwnMessage) 
+                            White
+                        else
+                            Color(0xFF212529)
+                    )
+                    
+                    // Add timestamp at the bottom right
+                    Text(
+                        text = formatTimestamp(message.timestamp),
                         style = MaterialTheme.typography.labelSmall,
                         color = if (isOwnMessage) 
                             White.copy(alpha = 0.7f)
                         else
-                            TextGrey
+                            TextGrey,
+                        modifier = Modifier
+                            .align(Alignment.End)
+                            .padding(top = 4.dp)
                     )
-                    Spacer(modifier = Modifier.height(4.dp))
                 }
-                
-                Text(
-                    text = message.content,
-                    color = if (isOwnMessage) 
-                        White
-                    else
-                        Color(0xFF212529)
-                )
             }
         }
     }
+}
+
+// Helper function to format timestamp
+private fun formatTimestamp(timestamp: Long): String {
+    val sdf = SimpleDateFormat("HH:mm", Locale.getDefault())
+    return sdf.format(Date(timestamp))
 } 

@@ -79,8 +79,10 @@ dependencies {
     // Coil for image loading
     implementation("io.coil-kt:coil-compose:2.5.0")
     
-    // Accompanist for SwipeRefresh
-    implementation("com.google.accompanist:accompanist-swiperefresh:0.32.0")
+    // Modern pull-to-refresh for Material 3
+    implementation("androidx.compose.material3:material3:1.2.0")
+    implementation("androidx.compose.material:material:1.6.1")
+    implementation("androidx.compose.material3:material3-window-size-class:1.2.0")
     
     // Tests
     testImplementation(libs.junit)

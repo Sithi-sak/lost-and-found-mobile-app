@@ -93,13 +93,18 @@ fun LostItemCard(
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment = Alignment.Top
                 ) {
                     Text(
                         text = item.title,
-                        style = MaterialTheme.typography.titleLarge,
-                        color = Color(0xFF212529)  // Laravel dark text color
+                        modifier = Modifier.weight(1f),
+                        style = MaterialTheme.typography.titleMedium,
+                        color = Color(0xFF212529),  // Laravel dark text color
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
                     )
+                    
+                    Spacer(modifier = Modifier.width(8.dp))
                     
                     Surface(
                         color = if (item.status == ItemStatus.LOST) LostRed else FoundGreen,
