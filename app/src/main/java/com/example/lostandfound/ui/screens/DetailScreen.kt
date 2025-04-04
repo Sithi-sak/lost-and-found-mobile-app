@@ -278,9 +278,8 @@ private fun ItemDetailContent(
                             bitmap = bitmap.asImageBitmap(),
                             contentDescription = "Image of lost item",
                             modifier = Modifier
-                                .fillMaxWidth()
-                                .height(200.dp),
-                            contentScale = ContentScale.Crop
+                                .fillMaxWidth(),
+                            contentScale = ContentScale.FillWidth
                         )
                     }
                 }
