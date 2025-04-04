@@ -70,6 +70,11 @@ fun LostItemCard(
                 Box(
                     modifier = Modifier
                         .size(80.dp)
+                        .border(
+                            width = 1.dp,
+                            color = BorderGrey,
+                            shape = RoundedCornerShape(0.dp)
+                        )
                 ) {
                     androidx.compose.foundation.Image(
                         bitmap = bitmap.asImageBitmap(),
