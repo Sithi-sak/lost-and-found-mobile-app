@@ -167,6 +167,11 @@ class FirebaseManager {
                 throw Exception("User not authenticated")
             }
 
+            // Get the user's username from their profile
+            val userDoc = db.collection("users").document(currentUser.uid).get().await()
+            val username = userDoc.getString("username") ?: "Unknown"
+            val userEmail = currentUser.email ?: ""
+
             val lostItem = LostItem(
                 id = "",
                 title = title,
@@ -174,6 +179,8 @@ class FirebaseManager {
                 contact = contact,
                 location = location,
                 userId = currentUser.uid,
+                userEmail = userEmail,
+                username = username,
                 imageBase64 = imageBase64,
                 timestamp = System.currentTimeMillis()
             )
@@ -559,6 +566,42 @@ class FirebaseManager {
         } catch (e: Exception) {
             Log.e("FirebaseManager", "Error getting user phone number", e)
             ""
+        }
+    }
+
+    // Get current user's username
+    suspend fun getCurrentUsername(): String {
+        val currentUser = getCurrentUser() ?: return ""
+        return try {
+            val userDoc = db.collection("users").document(currentUser.uid).get().await()
+            userDoc.getString("username") ?: ""
+        } catch (e: Exception) {
+            Log.e("FirebaseManager", "Error getting username", e)
+            ""
+        }
+    }
+    
+    // Get current user data
+    suspend fun getCurrentUserData(): Result<User> {
+        val currentUser = getCurrentUser() ?: return Result.failure(Exception("Not authenticated"))
+        return getUserData(currentUser.uid)
+    }
+    
+    // Update user profile
+    suspend fun updateUserProfile(username: String, phoneNumber: String): Result<Unit> {
+        val currentUser = getCurrentUser() ?: return Result.failure(Exception("Not authenticated"))
+        return try {
+            val userDoc = db.collection("users").document(currentUser.uid)
+            userDoc.update(
+                mapOf(
+                    "username" to username,
+                    "phoneNumber" to phoneNumber
+                )
+            ).await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e("FirebaseManager", "Error updating user profile", e)
+            Result.failure(e)
         }
     }
 
