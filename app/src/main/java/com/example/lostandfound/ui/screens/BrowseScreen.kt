@@ -52,6 +52,11 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.shape.RoundedCornerShape
 import com.example.lostandfound.ui.theme.Shapes
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.foundation.gestures.detectTapGestures
+import kotlinx.coroutines.launch
+import com.google.accompanist.swiperefresh.SwipeRefresh
+import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -69,6 +74,10 @@ fun BrowseScreen(
     val currentPage by viewModel.currentPage.collectAsState()
     val totalPages by viewModel.totalPages.collectAsState()
     var showSettingsMenu by remember { mutableStateOf(false) }
+    val coroutineScope = rememberCoroutineScope()
+    
+    // SwipeRefresh state
+    val swipeRefreshState = rememberSwipeRefreshState(isRefreshing = isLoading)
 
     // Load initial items when the screen is first displayed
     LaunchedEffect(Unit) {
@@ -163,44 +172,54 @@ fun BrowseScreen(
             }
         }
     ) { padding ->
-        Box(
+        SwipeRefresh(
+            state = swipeRefreshState,
+            onRefresh = {
+                coroutineScope.launch {
+                    viewModel.refreshItems()
+                }
+            },
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            if (items.isEmpty() && !isLoading) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text("No items found. Be the first to post!")
-                }
-            } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
-                ) {
-                    items(items) { item ->
-                        LostItemCard(
-                            item = item,
-                            onClick = { onNavigateToDetail(item) },
-                            onStatusChange = { newStatus ->
-                                viewModel.updateItemStatus(item.id, newStatus)
-                            }
-                        )
+            Box(
+                modifier = Modifier.fillMaxSize()
+            ) {
+                if (items.isEmpty() && !isLoading) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("No items found. Be the first to post!")
+                    }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+                    ) {
+                        items(items) { item ->
+                            LostItemCard(
+                                item = item,
+                                onClick = { onNavigateToDetail(item) },
+                                onStatusChange = { newStatus ->
+                                    viewModel.updateItemStatus(item.id, newStatus)
+                                }
+                            )
+                        }
                     }
                 }
-            }
 
-            // Show loading indicator only during initial load
-            if (isLoading && items.isEmpty()) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(32.dp)
-                    )
+                // Show loading indicator only during initial load
+                if (isLoading && items.isEmpty()) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(32.dp)
+                        )
+                    }
                 }
             }
         }
