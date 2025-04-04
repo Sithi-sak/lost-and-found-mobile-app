@@ -32,6 +32,18 @@ class LostAndFoundViewModel : ViewModel() {
     private val _userPhone = MutableStateFlow("")
     val userPhone: StateFlow<String> = _userPhone.asStateFlow()
     
+    // User name state
+    private val _userName = MutableStateFlow("")
+    val userName: StateFlow<String> = _userName.asStateFlow()
+    
+    // Theme state
+    private val _themeState = MutableStateFlow<ThemeState>(ThemeState.LIGHT)
+    val themeState: StateFlow<ThemeState> = _themeState.asStateFlow()
+    
+    // Profile update state
+    private val _profileUpdateState = MutableStateFlow<ProfileUpdateState>(ProfileUpdateState.Idle)
+    val profileUpdateState: StateFlow<ProfileUpdateState> = _profileUpdateState.asStateFlow()
+    
     // Form state
     private val _formState = MutableStateFlow<FormState>(FormState.Idle)
     val formState: StateFlow<FormState> = _formState.asStateFlow()
@@ -85,6 +97,7 @@ class LostAndFoundViewModel : ViewModel() {
                 totalItems = firebaseManager.getTotalItemCount()
                 _totalPages.value = (totalItems + pageSize - 1) / pageSize
                 fetchUserPhone()
+                fetchUserName()
             } catch (e: Exception) {
                 Log.e("ViewModel", "Error getting total item count", e)
             }
@@ -101,11 +114,22 @@ class LostAndFoundViewModel : ViewModel() {
         }
     }
     
+    private fun fetchUserName() {
+        viewModelScope.launch {
+            try {
+                _userName.value = firebaseManager.getCurrentUsername()
+            } catch (e: Exception) {
+                Log.e("ViewModel", "Error fetching username", e)
+            }
+        }
+    }
+    
     private fun checkAuthState() {
         val currentUser = firebaseManager.getCurrentUser()
         if (currentUser != null) {
             _authState.value = AuthState.Authenticated(currentUser)
             fetchUserPhone()
+            fetchUserName()
         } else {
             _authState.value = AuthState.Unauthenticated
         }
@@ -414,6 +438,36 @@ class LostAndFoundViewModel : ViewModel() {
             )
         }
     }
+
+    fun updateUserProfile(username: String, phoneNumber: String) {
+        viewModelScope.launch {
+            _profileUpdateState.value = ProfileUpdateState.Loading
+            
+            try {
+                val result = firebaseManager.updateUserProfile(username, phoneNumber)
+                result.fold(
+                    onSuccess = {
+                        _userName.value = username
+                        _userPhone.value = phoneNumber
+                        _profileUpdateState.value = ProfileUpdateState.Success
+                    },
+                    onFailure = { e ->
+                        _profileUpdateState.value = ProfileUpdateState.Error(e.message ?: "Failed to update profile")
+                    }
+                )
+            } catch (e: Exception) {
+                _profileUpdateState.value = ProfileUpdateState.Error(e.message ?: "An unknown error occurred")
+            }
+        }
+    }
+    
+    fun resetProfileUpdateState() {
+        _profileUpdateState.value = ProfileUpdateState.Idle
+    }
+
+    fun toggleTheme() {
+        _themeState.value = if (_themeState.value == ThemeState.LIGHT) ThemeState.DARK else ThemeState.LIGHT
+    }
 }
 
 sealed class AuthState {
@@ -462,4 +516,16 @@ sealed class PostState {
     data object Loading : PostState()
     data class Success(val id: String) : PostState()
     data class Error(val message: String) : PostState()
+}
+
+sealed class ProfileUpdateState {
+    object Idle : ProfileUpdateState()
+    object Loading : ProfileUpdateState()
+    object Success : ProfileUpdateState()
+    data class Error(val message: String) : ProfileUpdateState()
+}
+
+sealed class ThemeState {
+    object LIGHT : ThemeState()
+    object DARK : ThemeState()
 } 
