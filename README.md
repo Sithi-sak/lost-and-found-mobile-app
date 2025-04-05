@@ -41,3 +41,20 @@ To set up and run this project, ensure you have:
     - Minimum SDK: 24
     - Target SDK: 34 (or 35)
 - **Java**: JDK 11
+
+## Installation
+You can "git clone" this repository via https or ssh
+* HTTPS
+  ```sh
+  git clone https://github.com/Sithi-sak/lost-and-found-mobile-app.git
+  ```
+* SSH
+  ```sh
+  git clone git@github.com:Sithi-sak/lost-and-found-mobile-app.git
+  ```
+
+> [!NOTE]
+> For SSH, you would need to set up a SSH key and add it to Github
+
+## License
+This project is licensed under the **Apache 2.0 License**. See the [LICENSE](LICENSE) file for details.
