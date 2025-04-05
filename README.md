@@ -1,7 +1,7 @@
 # Lost and Found Mobile App
 
 ## Overview
-An Android-based e-commerce platform built with Java, designed for seamless buying and selling experiences. This collaborative project is hosted on GitHub and leverages modern tools for development and design.
+An Android-based Lost and Found app design to help user find their lost precious items by uploading the lost items on the platform that other user can help find your lost item.
 
 ### Features checklist
 - [x] User can create an account
@@ -33,7 +33,7 @@ An Android-based e-commerce platform built with Java, designed for seamless buyi
 
 To set up and run this project, ensure you have:
 
-- **Android Studio**: Latest stable version (e.g., Chipmunk or higher)
+- **Android Studio**: Latest stable version
 - **Gradle**: 8.9 (managed via Gradle wrapper)
 - **Android SDK**:
     - SDK Platform 34 (or 35 if available)
