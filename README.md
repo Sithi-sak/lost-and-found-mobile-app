@@ -6,7 +6,7 @@
 - [Project Structure](#project-structure)
 - [Technologies and Tools](#technologies-and-tools)
 - [Prerequisites](#prerequisites)
-- [Installation](#installation)
+- [Get started](#get-started)
 - [License](#license)
 
 ## Overview
@@ -98,7 +98,7 @@ To set up and run this project, ensure you have:
     - Target SDK: 34 (or 35)
 - **Java**: JDK 11
 
-## Installation
+## Get started
 You can "git clone" this repository via https or ssh
 * HTTPS
   ```sh
