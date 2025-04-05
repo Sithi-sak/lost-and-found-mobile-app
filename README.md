@@ -1,5 +1,14 @@
 # Lost and Found Mobile App
 
+## Table of Contents
+- [Overview](#overview)
+- [Features checklist](#features-checklist)
+- [Project Structure](#project-structure)
+- [Technologies and Tools](#technologies-and-tools)
+- [Prerequisites](#prerequisites)
+- [Installation](#installation)
+- [License](#license)
+
 ## Overview
 An Android-based Lost and Found app design to help user find their lost precious items by uploading the lost items on the platform that other user can help find your lost item.
 
@@ -33,6 +42,7 @@ lost-and-found-mobile-app/
 │           │   │   └── Message.kt             # Message data class
 │           │   ├── ui/
 │           │   │   ├── components/            # Reusable UI components
+│           │   │   │   └── LostItemCard.kt   # Navigation graph and routes (347 lines)
 │           │   │   ├── navigation/
 │           │   │   │   └── AppNavigation.kt   # Navigation graph and routes (347 lines)
 │           │   │   ├── screens/               # App screens
@@ -47,6 +57,9 @@ lost-and-found-mobile-app/
 │           │   │   │   ├── SettingsScreen.kt  # App settings screen (280 lines)
 │           │   │   │   └── SignupScreen.kt    # Signup screen (197 lines)
 │           │   │   └── theme/                 # Theme and styling
+│           │   │   │   ├── Color.kt   # User profile screen (373 lines)
+│           │   │   │   ├── Theme.kt  # App settings screen (280 lines)
+│           │   │   │   └── Type.kt    # Signup screen (197 lines)
 │           │   ├── utils/
 │           │   │   └── FirebaseStorageUtils.kt # Firebase storage utilities (16 lines)
 │           │   └── viewmodel/
@@ -99,7 +112,7 @@ You can "git clone" this repository via https or ssh
   git clone git@github.com:Sithi-sak/lost-and-found-mobile-app.git
   ```
 
-> [!NOTE]
+> [!WARNING]
 > For SSH, you would need to set up a SSH key and add it to Github
 
 ## License
