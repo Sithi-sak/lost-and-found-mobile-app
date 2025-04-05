@@ -12,6 +12,52 @@ An Android-based Lost and Found app design to help user find their lost precious
 - [x] User can see the details of the lost item provided by other users
 - [x] User can see the list of their post history and detail of the item posted by them
 
+## Project Structure
+```
+lost-and-found-mobile-app/
+├── app/
+│   ├── build.gradle.kts                       # App-level build configuration
+│   ├── google-services.json                   # Firebase configuration file
+│   └── src/
+│       └── main/
+│           ├── AndroidManifest.xml            # App manifest with permissions and components
+│           ├── java/com/example/lostandfound/ # Main package
+│           │   ├── MainActivity.kt            # Entry point of the application
+│           │   ├── firebase/
+│           │   │   ├── FirebaseManager.kt     # Firebase operations handler (693 lines)
+│           │   │   └── firestore.rules        # Firestore security rules
+│           │   ├── model/                     # Data models
+│           │   │   ├── LostItem.kt            # Lost item data class
+│           │   │   ├── User.kt                # User data class
+│           │   │   ├── Chat.kt                # Chat data class
+│           │   │   └── Message.kt             # Message data class
+│           │   ├── ui/
+│           │   │   ├── components/            # Reusable UI components
+│           │   │   ├── navigation/
+│           │   │   │   └── AppNavigation.kt   # Navigation graph and routes (347 lines)
+│           │   │   ├── screens/               # App screens
+│           │   │   │   ├── BrowseScreen.kt    # Browse lost items screen (248 lines)
+│           │   │   │   ├── ChatListScreen.kt  # List of chats screen (185 lines)
+│           │   │   │   ├── ChatScreen.kt      # Individual chat screen (251 lines)
+│           │   │   │   ├── DetailScreen.kt    # Item details screen (502 lines)
+│           │   │   │   ├── HistoryScreen.kt   # User's history screen (116 lines)
+│           │   │   │   ├── LoginScreen.kt     # Login screen (144 lines)
+│           │   │   │   ├── PostScreen.kt      # Post new item screen (236 lines)
+│           │   │   │   ├── ProfileScreen.kt   # User profile screen (373 lines)
+│           │   │   │   ├── SettingsScreen.kt  # App settings screen (280 lines)
+│           │   │   │   └── SignupScreen.kt    # Signup screen (197 lines)
+│           │   │   └── theme/                 # Theme and styling
+│           │   ├── utils/
+│           │   │   └── FirebaseStorageUtils.kt # Firebase storage utilities (16 lines)
+│           │   └── viewmodel/
+│           │       └── LostAndFoundViewModel.kt # Main ViewModel (540 lines)
+│           └── res/                           # Resources (layouts, drawables, etc.)
+├── build.gradle.kts                           # Project-level build configuration
+├── gradle/
+│   └── libs.versions.toml                     # Dependency versions management
+└── settings.gradle.kts                        # Project settings
+```
+
 ## Technologies and Tools
 
 <div align="left">
