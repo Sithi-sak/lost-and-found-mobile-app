@@ -29,7 +29,7 @@ An Android-based Lost and Found app design to help user find their lost precious
   <img width="12" />
 </div>
 
-## 🛠️ Prerequisites
+## Prerequisites
 
 To set up and run this project, ensure you have:
 
