@@ -25,50 +25,47 @@ An Android-based Lost and Found app design to help user find their lost precious
 ```
 lost-and-found-mobile-app/
 ├── app/
-│   ├── build.gradle.kts                       # App-level build configuration
-│   ├── google-services.json                   # Firebase configuration file
+│   ├── build.gradle.kts                           # App-level build configuration
+│   ├── google-services.json                       # Firebase configuration file
 │   └── src/
 │       └── main/
-│           ├── AndroidManifest.xml            # App manifest with permissions and components
-│           ├── java/com/example/lostandfound/ # Main package
-│           │   ├── MainActivity.kt            # Entry point of the application
+│           ├── AndroidManifest.xml                # App manifest with permissions and components
+│           ├── java/com/example/lostandfound/   
+│           │   ├── MainActivity.kt              
 │           │   ├── firebase/
-│           │   │   ├── FirebaseManager.kt     # Firebase operations handler (693 lines)
-│           │   │   └── firestore.rules        # Firestore security rules
-│           │   ├── model/                     # Data models
-│           │   │   ├── LostItem.kt            # Lost item data class
-│           │   │   ├── User.kt                # User data class
-│           │   │   ├── Chat.kt                # Chat data class
-│           │   │   └── Message.kt             # Message data class
+│           │   │   ├── FirebaseManager.kt         # Firebase operations handler
+│           │   │   └── firestore.rules            # Firestore security rules
+│           │   ├── model/                         # Data models
+│           │   │   ├── LostItem.kt              
+│           │   │   ├── User.kt                  
+│           │   │   ├── Chat.kt                  
+│           │   │   └── Message.kt               
 │           │   ├── ui/
-│           │   │   ├── components/            # Reusable UI components
-│           │   │   │   └── LostItemCard.kt   # Navigation graph and routes (347 lines)
+│           │   │   ├── components/                # Reusable UI components
+│           │   │   │   └── LostItemCard.kt      
 │           │   │   ├── navigation/
-│           │   │   │   └── AppNavigation.kt   # Navigation graph and routes (347 lines)
-│           │   │   ├── screens/               # App screens
-│           │   │   │   ├── BrowseScreen.kt    # Browse lost items screen (248 lines)
-│           │   │   │   ├── ChatListScreen.kt  # List of chats screen (185 lines)
-│           │   │   │   ├── ChatScreen.kt      # Individual chat screen (251 lines)
-│           │   │   │   ├── DetailScreen.kt    # Item details screen (502 lines)
-│           │   │   │   ├── HistoryScreen.kt   # User's history screen (116 lines)
-│           │   │   │   ├── LoginScreen.kt     # Login screen (144 lines)
-│           │   │   │   ├── PostScreen.kt      # Post new item screen (236 lines)
-│           │   │   │   ├── ProfileScreen.kt   # User profile screen (373 lines)
-│           │   │   │   ├── SettingsScreen.kt  # App settings screen (280 lines)
-│           │   │   │   └── SignupScreen.kt    # Signup screen (197 lines)
-│           │   │   └── theme/                 # Theme and styling
-│           │   │   │   ├── Color.kt   # User profile screen (373 lines)
-│           │   │   │   ├── Theme.kt  # App settings screen (280 lines)
-│           │   │   │   └── Type.kt    # Signup screen (197 lines)
+│           │   │   │   └── AppNavigation.kt       # Navigation
+│           │   │   ├── screens/                   # App screens
+│           │   │   │   ├── BrowseScreen.kt      
+│           │   │   │   ├── ChatListScreen.kt
+│           │   │   │   ├── ChatScreen.kt
+│           │   │   │   ├── DetailScreen.kt
+│           │   │   │   ├── HistoryScreen.kt
+│           │   │   │   ├── LoginScreen.kt
+│           │   │   │   ├── PostScreen.kt
+│           │   │   │   ├── ProfileScreen.kt
+│           │   │   │   ├── SettingsScreen.kt
+│           │   │   │   └── SignupScreen.kt
+│           │   │   └── theme/                     # Theme and styling
 │           │   ├── utils/
-│           │   │   └── FirebaseStorageUtils.kt # Firebase storage utilities (16 lines)
+│           │   │   └── FirebaseStorageUtils.kt    # Firebase storage utilities
 │           │   └── viewmodel/
-│           │       └── LostAndFoundViewModel.kt # Main ViewModel (540 lines)
-│           └── res/                           # Resources (layouts, drawables, etc.)
-├── build.gradle.kts                           # Project-level build configuration
+│           │       └── LostAndFoundViewModel.kt   # Main ViewModel
+│           └── res/                             
+├── build.gradle.kts                               # Project-level build configuration
 ├── gradle/
-│   └── libs.versions.toml                     # Dependency versions management
-└── settings.gradle.kts                        # Project settings
+│   └── libs.versions.toml                         # Dependency versions management
+└── settings.gradle.kts                          
 ```
 
 ## Technologies and Tools
