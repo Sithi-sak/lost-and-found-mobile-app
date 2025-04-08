@@ -33,7 +33,6 @@ class MainActivity : ComponentActivity() {
         // Initialize Firebase Storage Utils with the application context
         FirebaseStorageUtils.init(this)
         
-        // Enable edge-to-edge display for modern Android UI
         enableEdgeToEdge()
         
         // Set up the Compose UI
