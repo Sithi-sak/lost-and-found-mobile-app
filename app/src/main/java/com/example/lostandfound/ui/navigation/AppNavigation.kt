@@ -48,6 +48,10 @@ import com.example.lostandfound.ui.screens.SignupScreen
 import com.example.lostandfound.viewmodel.AuthState
 import com.example.lostandfound.viewmodel.LostAndFoundViewModel
 
+/**
+ * Sealed class defining all navigation routes in the app.
+ * Each object represents a screen with its route path.
+ */
 sealed class Screen(val route: String) {
     object Login : Screen("login")
     object Signup : Screen("signup")
@@ -55,36 +59,54 @@ sealed class Screen(val route: String) {
     object Post : Screen("post")
     object History : Screen("history")
     object Settings : Screen("settings")
-    object Detail : Screen("detail/{itemId}")
+    object Detail : Screen("detail/{itemId}") // Route with path parameter
     object Profile : Screen("profile")
-    object Chat : Screen("chat/{chatId}")
+    object Chat : Screen("chat/{chatId}") // Route with path parameter
     object ChatList : Screen("chats")
 
+    /**
+     * Helper method to create a parametrized route for Detail screen
+     * itemId The ID of the item to view details for
+     * Formatted route string with the itemId parameter
+     */
     fun createRoute(itemId: String): String {
         return "detail/$itemId"
     }
 }
 
+/**
+ * Main navigation component that sets up the navigation graph and handles routing.
+ * Determines the start destination based on authentication state.
+ *
+ * viewModel The ViewModel that provides data and states to screens
+ * modifier Optional modifier for the NavHost
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AppNavigation(
     viewModel: LostAndFoundViewModel,
     modifier: Modifier = Modifier
 ) {
+    // Create a navigation controller to manage app navigation
     val navController = rememberNavController()
+    // Collect the current authentication state
     val authState by viewModel.authState.collectAsState()
 
+    // Set up the navigation host with routes to different screens
+    // Start destination depends on whether user is logged in
     NavHost(
         navController = navController,
         startDestination = if (authState is AuthState.Authenticated) Screen.Browse.route else Screen.Login.route,
         modifier = modifier
     ) {
+        // Login screen route
         composable(Screen.Login.route) {
             LoginScreen(
                 viewModel = viewModel,
                 authState = authState,
                 onNavigateToSignUp = { navController.navigate(Screen.Signup.route) },
                 onLoginSuccess = {
+                    // Navigate to Browse screen and remove Login from back stack
                     navController.navigate(Screen.Browse.route) {
                         popUpTo(Screen.Login.route) { inclusive = true }
                     }
@@ -92,6 +114,7 @@ fun AppNavigation(
             )
         }
 
+        // Browse (Home) screen route - uses the bottom navigation
         composable(Screen.Browse.route) {
             MainScaffold(
                 navController = navController,
@@ -108,6 +131,7 @@ fun AppNavigation(
                     onNavigateToHistory = { navController.navigate(Screen.History.route) },
                     onNavigateToSettings = { navController.navigate(Screen.Settings.route) },
                     onLogout = {
+                        // Handle logout by signing out and navigating to login
                         viewModel.signOut()
                         navController.navigate(Screen.Login.route) {
                             popUpTo(navController.graph.findStartDestination().id) {
@@ -119,6 +143,7 @@ fun AppNavigation(
             }
         }
 
+        // History screen route - shows user's posts
         composable(Screen.History.route) {
             MainScaffold(
                 navController = navController,
@@ -136,6 +161,7 @@ fun AppNavigation(
             }
         }
         
+        // Signup screen route
         composable(Screen.Signup.route) {
             SignupScreen(
                 viewModel = viewModel,
@@ -147,6 +173,7 @@ fun AppNavigation(
             )
         }
         
+        // Post new item screen route
         composable(Screen.Post.route) {
             PostScreen(
                 viewModel = viewModel,
@@ -154,6 +181,7 @@ fun AppNavigation(
             )
         }
         
+        // Settings screen route
         composable(Screen.Settings.route) {
             SettingsScreen(
                 viewModel = viewModel,
@@ -181,10 +209,12 @@ fun AppNavigation(
             )
         }
         
+        // Detail screen route with itemId parameter
         composable(
             route = Screen.Detail.route,
             arguments = listOf(navArgument("itemId") { type = NavType.StringType })
         ) { backStackEntry ->
+            // Extract the itemId parameter from navigation arguments
             val itemId = backStackEntry.arguments?.getString("itemId") ?: ""
             
             DetailScreen(
@@ -198,6 +228,7 @@ fun AppNavigation(
             )
         }
 
+        // Profile screen route - uses the bottom navigation
         composable(Screen.Profile.route) {
             MainScaffold(
                 navController = navController,
@@ -221,10 +252,12 @@ fun AppNavigation(
             }
         }
 
+        // Chat screen route with chatId parameter
         composable(
             route = Screen.Chat.route,
             arguments = listOf(navArgument("chatId") { type = NavType.StringType })
         ) { backStackEntry ->
+            // Extract the chatId parameter from navigation arguments
             val chatId = backStackEntry.arguments?.getString("chatId") ?: ""
             ChatScreen(
                 chatId = chatId,
@@ -233,6 +266,7 @@ fun AppNavigation(
             )
         }
 
+        // Chat list screen route - uses the bottom navigation
         composable(Screen.ChatList.route) {
             MainScaffold(
                 navController = navController,
@@ -251,6 +285,15 @@ fun AppNavigation(
     }
 }
 
+/**
+ * Scaffold layout that includes the bottom navigation bar.
+ * Used by screens that are part of the main navigation flow (Browse, History, ChatList, Profile).
+ *
+ * navController The navigation controller
+ * viewModel The ViewModel that provides data to screens
+ * currentRoute The current route to highlight in the bottom navigation
+ * content The content to display within the scaffold
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScaffold(
@@ -259,6 +302,7 @@ fun MainScaffold(
     currentRoute: String,
     content: @Composable (Modifier) -> Unit
 ) {
+    // Define the bottom navigation items
     val items = listOf(
         NavigationItem(
             route = Screen.Browse.route,
@@ -286,8 +330,10 @@ fun MainScaffold(
         )
     )
     
+    // Create scaffold with bottom navigation bar
     Scaffold(
         bottomBar = {
+            // Add elevation to bottom bar with surface
             Surface(
                 color = MaterialTheme.colorScheme.surface,
                 shadowElevation = 8.dp,
@@ -297,13 +343,16 @@ fun MainScaffold(
                     containerColor = MaterialTheme.colorScheme.surface,
                     tonalElevation = 0.dp
                 ) {
+                    // Get current navigation state
                     val navBackStackEntry by navController.currentBackStackEntryAsState()
                     val currentDestination = navBackStackEntry?.destination
                     
+                    // Create navigation items for bottom bar
                     items.forEach { item ->
                         NavigationBarItem(
                             icon = { 
                                 Icon(
+                                    // Show selected or unselected icon based on current route
                                     imageVector = if (currentDestination?.hierarchy?.any { it.route == item.route } == true) {
                                         item.selectedIcon
                                     } else {
@@ -314,6 +363,7 @@ fun MainScaffold(
                             },
                             selected = currentDestination?.hierarchy?.any { it.route == item.route } == true,
                             onClick = {
+                                // Navigate with single top pattern to avoid duplicate screens on the stack
                                 navController.navigate(item.route) {
                                     popUpTo(navController.graph.findStartDestination().id) {
                                         saveState = true
@@ -335,10 +385,19 @@ fun MainScaffold(
             }
         }
     ) { innerPadding ->
+        // Apply padding from scaffold to content
         content(Modifier.padding(innerPadding))
     }
 }
 
+/**
+ * Data class representing an item in the bottom navigation.
+ *
+ * route The route this navigation item links to
+ * selectedIcon The icon to display when this item is selected
+ * unselectedIcon The icon to display when this item is not selected
+ * label The text label for this navigation item
+ */
 data class NavigationItem(
     val route: String,
     val selectedIcon: androidx.compose.ui.graphics.vector.ImageVector,

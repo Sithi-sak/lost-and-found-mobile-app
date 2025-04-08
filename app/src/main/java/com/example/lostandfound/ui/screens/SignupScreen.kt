@@ -40,6 +40,15 @@ import com.example.lostandfound.viewmodel.AuthState
 import com.example.lostandfound.viewmodel.LostAndFoundViewModel
 import kotlinx.coroutines.launch
 
+/**
+ * SignupScreen composable that handles user registration.
+ * Provides a form for users to create a new account with email, username, phone, and password.
+ *
+ * param viewModel The ViewModel that manages authentication state and business logic
+ * param authState The current authentication state from the ViewModel
+ * param onNavigateToLogin Callback function to navigate to the login screen
+ * param onSignupSuccess Callback function to navigate to the main screen after successful signup
+ */
 @Composable
 fun SignupScreen(
     viewModel: LostAndFoundViewModel,
@@ -47,49 +56,59 @@ fun SignupScreen(
     onNavigateToLogin: () -> Unit,
     onSignupSuccess: () -> Unit
 ) {
+    // State variables for form fields
     var email by remember { mutableStateOf("") }
     var username by remember { mutableStateOf("") }
     var phoneNumber by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
+    
+    // Snackbar state for showing error messages
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     
+    // Handle authentication state changes
     LaunchedEffect(authState) {
         when (authState) {
-            is AuthState.Authenticated -> onSignupSuccess()
+            is AuthState.Authenticated -> onSignupSuccess() // Navigate on successful signup
             is AuthState.Error -> {
+                // Show error message in snackbar
                 scope.launch {
                     snackbarHostState.showSnackbar(authState.message)
                 }
             }
-            else -> {}
+            else -> {} // Do nothing for other states
         }
     }
     
+    // Main screen layout with snackbar support
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { padding ->
+        // Content container
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
         ) {
+            // Signup form column with scrolling enabled for smaller screens
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp)
-                    .verticalScroll(rememberScrollState())
+                    .verticalScroll(rememberScrollState()) // Enable scrolling for the form
                     .align(Alignment.Center),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
+                // Screen title
                 Text(
                     text = "Sign Up",
                     style = MaterialTheme.typography.headlineMedium,
                     modifier = Modifier.padding(bottom = 24.dp)
                 )
 
+                // Username input field
                 OutlinedTextField(
                     value = username,
                     onValueChange = { username = it },
@@ -103,6 +122,7 @@ fun SignupScreen(
                 
                 Spacer(modifier = Modifier.height(16.dp))
 
+                // Email input field
                 OutlinedTextField(
                     value = email,
                     onValueChange = { email = it },
@@ -116,6 +136,7 @@ fun SignupScreen(
                 
                 Spacer(modifier = Modifier.height(16.dp))
                 
+                // Phone number input field with phone keyboard type
                 OutlinedTextField(
                     value = phoneNumber,
                     onValueChange = { phoneNumber = it },
@@ -129,6 +150,7 @@ fun SignupScreen(
                 
                 Spacer(modifier = Modifier.height(16.dp))
                 
+                // Password input field with hidden text
                 OutlinedTextField(
                     value = password,
                     onValueChange = { password = it },
@@ -143,6 +165,7 @@ fun SignupScreen(
                 
                 Spacer(modifier = Modifier.height(16.dp))
                 
+                // Confirm password input field with hidden text
                 OutlinedTextField(
                     value = confirmPassword,
                     onValueChange = { confirmPassword = it },
@@ -157,8 +180,10 @@ fun SignupScreen(
                 
                 Spacer(modifier = Modifier.height(24.dp))
                 
+                // Sign up button with validation
                 Button(
                     onClick = {
+                        // Check if passwords match before attempting signup
                         if (password == confirmPassword) {
                             viewModel.signUp(email, username, phoneNumber, password)
                         } else {
@@ -173,6 +198,7 @@ fun SignupScreen(
                         containerColor = Primary,
                         contentColor = MaterialTheme.colorScheme.onPrimary
                     ),
+                    // Button is enabled only when all fields are filled and not in loading state
                     enabled = email.isNotEmpty() && username.isNotEmpty() && 
                              phoneNumber.isNotEmpty() && password.isNotEmpty() && 
                              confirmPassword.isNotEmpty() && authState !is AuthState.Loading
@@ -182,11 +208,13 @@ fun SignupScreen(
                 
                 Spacer(modifier = Modifier.height(16.dp))
                 
+                // Link to login screen for existing users
                 TextButton(onClick = onNavigateToLogin) {
                     Text("Already have an account? Login")
                 }
             }
             
+            // Loading indicator shown during authentication
             if (authState is AuthState.Loading) {
                 CircularProgressIndicator(
                     modifier = Modifier.align(Alignment.Center)

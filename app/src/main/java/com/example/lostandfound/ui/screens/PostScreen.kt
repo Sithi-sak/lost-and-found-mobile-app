@@ -1,5 +1,6 @@
 package com.example.lostandfound.ui.screens
 
+// Import necessary Android and Compose components for image handling and UI
 import android.graphics.BitmapFactory
 import android.net.Uri
 import android.util.Base64
@@ -26,28 +27,41 @@ import com.example.lostandfound.viewmodel.PostState
 import androidx.compose.foundation.BorderStroke
 import com.example.lostandfound.ui.theme.Shapes
 
+/**
+ * PostScreen composable that allows users to create a new lost item post.
+ * Provides form fields for title, description, contact info, location, and image upload.
+ *
+ * param viewModel The ViewModel that manages post creation and state
+ * param onNavigateBack Callback function to navigate back after successful post creation
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PostScreen(
     viewModel: LostAndFoundViewModel,
     onNavigateBack: () -> Unit
 ) {
+    // State variables for form fields
     var title by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
     var contact by remember { mutableStateOf("") }
     var location by remember { mutableStateOf("") }
+    
+    // Get Android context for content resolver access
     val context = LocalContext.current
+    
+    // Collect states from ViewModel
     val postState by viewModel.postState.collectAsState()
     val imageState by viewModel.imageState.collectAsState()
     val userPhone by viewModel.userPhone.collectAsState()
 
-    // Set initial contact value when userPhone changes
+    // Auto-fill contact field with user's phone number if available
     LaunchedEffect(userPhone) {
         if (contact.isEmpty() && userPhone.isNotEmpty()) {
             contact = userPhone
         }
     }
 
+    // Activity result launcher for image selection
     val launcher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
@@ -59,6 +73,7 @@ fun PostScreen(
         }
     }
 
+    // Handle post success and navigate back
     LaunchedEffect(postState) {
         if (postState is PostState.Success) {
             onNavigateBack()
@@ -67,6 +82,7 @@ fun PostScreen(
         }
     }
 
+    // Main screen layout with top app bar
     Scaffold(
         topBar = {
             TopAppBar(
@@ -84,6 +100,7 @@ fun PostScreen(
             )
         }
     ) { padding ->
+        // Scrollable form content
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -92,6 +109,7 @@ fun PostScreen(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            // Title input field
             OutlinedTextField(
                 value = title,
                 onValueChange = { title = it },
@@ -107,6 +125,7 @@ fun PostScreen(
                 singleLine = true
             )
 
+            // Description input field with larger height
             OutlinedTextField(
                 value = description,
                 onValueChange = { description = it },
@@ -123,6 +142,7 @@ fun PostScreen(
                 )
             )
 
+            // Contact information input field (pre-filled with user's phone)
             OutlinedTextField(
                 value = contact,
                 onValueChange = { contact = it },
@@ -138,6 +158,7 @@ fun PostScreen(
                 singleLine = true
             )
 
+            // Location input field
             OutlinedTextField(
                 value = location,
                 onValueChange = { location = it },
@@ -153,8 +174,9 @@ fun PostScreen(
                 singleLine = true
             )
 
-            // Image preview
+            // Image preview - only displayed if an image has been selected
             if (imageState is ImageState.Success) {
+                // Decode Base64 string to bitmap for display
                 val imageBytes = Base64.decode((imageState as ImageState.Success).base64String, Base64.DEFAULT)
                 val bitmap = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
                 Image(
@@ -166,8 +188,9 @@ fun PostScreen(
                 )
             }
 
+            // Image selection button
             OutlinedButton(
-                onClick = { launcher.launch("image/*") },
+                onClick = { launcher.launch("image/*") }, // Open system file picker for images
                 modifier = Modifier.fillMaxWidth(),
                 shape = Shapes.extraSmall,
                 colors = ButtonDefaults.outlinedButtonColors(
@@ -180,6 +203,7 @@ fun PostScreen(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.fillMaxWidth()
                 ) {
+                    // Button text changes based on image state
                     Text(
                         when (imageState) {
                             is ImageState.Success -> "Change Image"
@@ -191,14 +215,18 @@ fun PostScreen(
                 }
             }
 
+            // Post submission button
             Button(
                 onClick = {
+                    // Extract Base64 image if available
                     val base64Image = when (imageState) {
                         is ImageState.Success -> (imageState as ImageState.Success).base64String
                         else -> ""
                     }
+                    // Call ViewModel to create the lost item
                     viewModel.createLostItem(title, description, contact, location, base64Image)
                 },
+                // Button is enabled only when all required fields are filled
                 enabled = title.isNotBlank() && description.isNotBlank() && contact.isNotBlank() && location.isNotBlank(),
                 modifier = Modifier.fillMaxWidth(),
                 shape = Shapes.extraSmall,
@@ -214,6 +242,7 @@ fun PostScreen(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.fillMaxWidth()
                 ) {
+                    // Button text changes based on post state
                     Text(
                         when (postState) {
                             is PostState.Loading -> "Posting..."
@@ -224,6 +253,7 @@ fun PostScreen(
                 }
             }
 
+            // Error message display
             if (postState is PostState.Error) {
                 Text(
                     text = (postState as PostState.Error).message,

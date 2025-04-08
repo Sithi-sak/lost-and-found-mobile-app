@@ -1,5 +1,6 @@
 package com.example.lostandfound.ui.screens
 
+// Import necessary Android and Compose components for chat functionality
 import android.widget.Toast
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -26,6 +27,14 @@ import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
 
+/**
+ * ChatScreen composable that displays a conversation between users.
+ * Shows messages in a scrollable list with message input at the bottom.
+ *
+ * chatId The unique identifier of the chat conversation
+ * viewModel The ViewModel that manages chat state and message handling
+ * onNavigateBack Callback function to navigate back from the chat
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChatScreen(
@@ -33,28 +42,38 @@ fun ChatScreen(
     viewModel: LostAndFoundViewModel,
     onNavigateBack: () -> Unit
 ) {
+    // State for the current message being typed
     var messageText by remember { mutableStateOf("") }
+    
+    // List to store and display messages
     val messages = remember { mutableStateListOf<Message>() }
+    
+    // Collect authentication state to identify current user
     val authState by viewModel.authState.collectAsState()
     val currentUser = (authState as? AuthState.Authenticated)?.user
+    
+    // Collect chat state for error handling
     val chatState by viewModel.chatState.collectAsState()
     val context = LocalContext.current
     
-    // Create a LazyListState to control scrolling
+    // State for controlling message list scrolling
     val listState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
     
-    // Sort messages by timestamp
+    // Sort messages by timestamp for chronological display
     val sortedMessages = messages.sortedBy { it.timestamp }
 
-    // Collect messages and scroll to bottom when new messages arrive
+    // Effect to load messages and handle updates
     LaunchedEffect(chatId) {
+        // Initial load of chat messages
         viewModel.getChatMessages(chatId)
+        
+        // Collect new messages and update the UI
         viewModel.messages.collect { newMessages ->
             messages.clear()
             messages.addAll(newMessages)
             
-            // Scroll to the latest message
+            // Auto-scroll to the latest message
             if (newMessages.isNotEmpty()) {
                 coroutineScope.launch {
                     listState.animateScrollToItem(newMessages.size - 1)
@@ -63,7 +82,7 @@ fun ChatScreen(
         }
     }
 
-    // Show error toast if chat state is error
+    // Effect to handle chat errors
     LaunchedEffect(chatState) {
         if (chatState is ChatState.Error) {
             Toast.makeText(
@@ -74,6 +93,7 @@ fun ChatScreen(
         }
     }
 
+    // Main screen layout with top app bar
     Scaffold(
         topBar = {
             TopAppBar(
@@ -96,7 +116,7 @@ fun ChatScreen(
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            // Messages List
+            // Messages List - Scrollable container for chat messages
             LazyColumn(
                 state = listState,
                 modifier = Modifier
@@ -106,6 +126,7 @@ fun ChatScreen(
                 contentPadding = PaddingValues(vertical = 16.dp)
             ) {
                 items(sortedMessages) { message ->
+                    // Determine if message is from current user
                     val isOwnMessage = message.senderId == currentUser?.uid
                     MessageBubble(
                         message = message,
@@ -115,7 +136,7 @@ fun ChatScreen(
                 }
             }
 
-            // Message Input
+            // Message Input Area - Fixed at bottom of screen
             Surface(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -133,6 +154,7 @@ fun ChatScreen(
                         .padding(12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    // Message input field
                     OutlinedTextField(
                         value = messageText,
                         onValueChange = { messageText = it },
@@ -152,15 +174,17 @@ fun ChatScreen(
                         shape = Shapes.extraSmall
                     )
                     
+                    // Send message button
                     IconButton(
                         onClick = {
                             if (messageText.isNotBlank()) {
+                                // Send message and clear input
                                 viewModel.sendMessage(chatId, messageText)
                                 messageText = ""
                                 
-                                // Scroll to bottom after sending message
+                                // Auto-scroll to bottom after sending
                                 coroutineScope.launch {
-                                    // Small delay to ensure the new message is added
+                                    // Small delay to ensure message is added
                                     kotlinx.coroutines.delay(100)
                                     listState.animateScrollToItem(messages.size)
                                 }
@@ -180,6 +204,13 @@ fun ChatScreen(
     }
 }
 
+/**
+ * MessageBubble composable that displays a single message in the chat.
+ * Shows different styles for own messages vs. other users' messages.
+ *
+ * @param message The message to display
+ * @param isOwnMessage Boolean indicating if the message is from the current user
+ */
 @Composable
 fun MessageBubble(
     message: Message,
@@ -193,7 +224,7 @@ fun MessageBubble(
             modifier = Modifier.padding(vertical = 4.dp),
             horizontalAlignment = if (isOwnMessage) Alignment.End else Alignment.Start
         ) {
-            // Always show sender name above the message
+            // Sender name display
             Text(
                 text = if (isOwnMessage) "You" else message.senderName,
                 style = MaterialTheme.typography.labelSmall,
@@ -201,6 +232,7 @@ fun MessageBubble(
                 modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
             )
             
+            // Message bubble with different colors for own/other messages
             Surface(
                 shape = Shapes.extraSmall,
                 color = if (isOwnMessage) 
@@ -218,6 +250,7 @@ fun MessageBubble(
                 Column(
                     modifier = Modifier.padding(12.dp)
                 ) {
+                    // Message content
                     Text(
                         text = message.content,
                         color = if (isOwnMessage) 
@@ -226,7 +259,7 @@ fun MessageBubble(
                             Color(0xFF212529)
                     )
                     
-                    // Add timestamp at the bottom right
+                    // Timestamp display
                     Text(
                         text = formatTimestamp(message.timestamp),
                         style = MaterialTheme.typography.labelSmall,
@@ -244,7 +277,13 @@ fun MessageBubble(
     }
 }
 
-// Helper function to format timestamp
+/**
+ * Helper function to format message timestamps.
+ * Converts Unix timestamp to readable time format.
+ *
+ * timestamp The Unix timestamp to format
+ * Formatted time string (HH:mm)
+ */
 private fun formatTimestamp(timestamp: Long): String {
     val sdf = SimpleDateFormat("HH:mm", Locale.getDefault())
     return sdf.format(Date(timestamp))

@@ -41,6 +41,15 @@ import com.example.lostandfound.viewmodel.AuthState
 import com.example.lostandfound.viewmodel.LostAndFoundViewModel
 import kotlinx.coroutines.launch
 
+/**
+ * LoginScreen composable that handles user authentication.
+ * Provides a form for users to enter their email and password to sign in.
+ *
+ * param viewModel The ViewModel that manages authentication state and business logic
+ * param authState The current authentication state from the ViewModel
+ * param onNavigateToSignUp Callback function to navigate to the sign-up screen
+ * param onLoginSuccess Callback function to navigate to the main screen after successful login
+ */
 @Composable
 fun LoginScreen(
     viewModel: LostAndFoundViewModel,
@@ -48,31 +57,39 @@ fun LoginScreen(
     onNavigateToSignUp: () -> Unit,
     onLoginSuccess: () -> Unit
 ) {
+    // State variables for form fields
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    
+    // Snackbar state for showing error messages
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     
+    // Handle authentication state changes
     LaunchedEffect(authState) {
         when (authState) {
-            is AuthState.Authenticated -> onLoginSuccess()
+            is AuthState.Authenticated -> onLoginSuccess() // Navigate on successful login
             is AuthState.Error -> {
+                // Show error message in snackbar
                 scope.launch {
                     snackbarHostState.showSnackbar(authState.message)
                 }
             }
-            else -> {}
+            else -> {} // Do nothing for other states
         }
     }
     
+    // Main screen layout with snackbar support
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { padding ->
+        // Content container
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
         ) {
+            // Login form column
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -81,12 +98,14 @@ fun LoginScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
+                // App title
                 Text(
                     text = "Lost and Found",
                     style = MaterialTheme.typography.headlineMedium,
                     modifier = Modifier.padding(bottom = 24.dp)
                 )
                 
+                // Email input field
                 OutlinedTextField(
                     value = email,
                     onValueChange = { email = it },
@@ -100,6 +119,7 @@ fun LoginScreen(
                 
                 Spacer(modifier = Modifier.height(16.dp))
                 
+                // Password input field with hidden text
                 OutlinedTextField(
                     value = password,
                     onValueChange = { password = it },
@@ -114,6 +134,7 @@ fun LoginScreen(
                 
                 Spacer(modifier = Modifier.height(24.dp))
                 
+                // Login button - enabled only when fields are filled and not loading
                 Button(
                     onClick = { viewModel.signIn(email, password) },
                     modifier = Modifier.fillMaxWidth(),
@@ -129,11 +150,13 @@ fun LoginScreen(
                 
                 Spacer(modifier = Modifier.height(16.dp))
                 
+                // Link to sign-up screen for new users
                 TextButton(onClick = onNavigateToSignUp) {
                     Text("Don't have an account? Sign up")
                 }
             }
             
+            // Loading indicator shown during authentication
             if (authState is AuthState.Loading) {
                 CircularProgressIndicator(
                     modifier = Modifier.align(Alignment.Center)

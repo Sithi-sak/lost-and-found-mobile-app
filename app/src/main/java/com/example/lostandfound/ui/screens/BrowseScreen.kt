@@ -1,5 +1,6 @@
 package com.example.lostandfound.ui.screens
 
+// Import necessary Android and Compose components for browse screen functionality
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -60,6 +61,18 @@ import androidx.compose.material.pullrefresh.pullRefresh
 import androidx.compose.material.pullrefresh.rememberPullRefreshState
 import androidx.compose.material.ExperimentalMaterialApi
 
+/**
+ * BrowseScreen composable that displays a list of lost items with pagination.
+ * Features include pull-to-refresh, pagination controls, and item status updates.
+ *
+ * viewModel The ViewModel that manages lost items data
+ * onNavigateToDetail Callback for viewing item details
+ * onNavigateToPost Callback for creating new items
+ * onNavigateToHistory Callback for viewing user's items
+ * onNavigateToSettings Callback for app settings
+ * onLogout Callback for user logout
+ * modifier Optional modifier for the screen layout
+ */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterialApi::class)
 @Composable
 fun BrowseScreen(
@@ -71,6 +84,7 @@ fun BrowseScreen(
     onLogout: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    // Collect state from ViewModel
     val items by viewModel.items.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val currentPage by viewModel.currentPage.collectAsState()
@@ -78,7 +92,7 @@ fun BrowseScreen(
     var showSettingsMenu by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
     
-    // Pull-to-refresh state
+    // Pull-to-refresh state management
     var refreshing by remember { mutableStateOf(false) }
     val pullRefreshState = rememberPullRefreshState(refreshing, { 
         refreshing = true
@@ -87,23 +101,25 @@ fun BrowseScreen(
         }
     })
     
-    // Track loading state
+    // Track loading state for pull-to-refresh
     LaunchedEffect(isLoading) {
         if (!isLoading && refreshing) {
             refreshing = false
         }
     }
     
-    // Load initial items when the screen is first displayed
+    // Load initial items when screen is first displayed
     LaunchedEffect(Unit) {
         if (items.isEmpty()) {
             viewModel.loadMoreItems()
         }
     }
 
+    // Main screen layout with Scaffold
     Scaffold(
         modifier = modifier,
         topBar = {
+            // Top app bar with title
             TopAppBar(
                 title = { Text("Lost Items") },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -113,6 +129,7 @@ fun BrowseScreen(
             )
         },
         floatingActionButton = {
+            // Floating action button for creating new items
             FloatingActionButton(
                 onClick = onNavigateToPost,
                 containerColor = MaterialTheme.colorScheme.primary
@@ -125,6 +142,7 @@ fun BrowseScreen(
             }
         },
         bottomBar = {
+            // Pagination controls if there are multiple pages
             if (totalPages > 1) {
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
@@ -138,6 +156,7 @@ fun BrowseScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
+                        // Previous page button
                         Button(
                             onClick = { viewModel.previousPage() },
                             enabled = currentPage > 1,
@@ -158,11 +177,13 @@ fun BrowseScreen(
                             }
                         }
 
+                        // Current page indicator
                         Text(
                             text = "Page $currentPage of $totalPages",
                             style = MaterialTheme.typography.titleMedium
                         )
 
+                        // Next page button
                         Button(
                             onClick = { viewModel.nextPage() },
                             enabled = currentPage < totalPages,
@@ -187,12 +208,14 @@ fun BrowseScreen(
             }
         }
     ) { padding ->
+        // Main content area with pull-to-refresh
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
                 .pullRefresh(pullRefreshState)
         ) {
+            // Empty state message
             if (items.isEmpty() && !isLoading) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
@@ -201,6 +224,7 @@ fun BrowseScreen(
                     Text("No items found. Be the first to post!")
                 }
             } else {
+                // List of lost items
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(
@@ -222,7 +246,7 @@ fun BrowseScreen(
                 }
             }
 
-            // Show loading indicator only during initial load
+            // Loading indicator for initial load
             if (isLoading && items.isEmpty()) {
                 Box(
                     modifier = Modifier.fillMaxSize(),

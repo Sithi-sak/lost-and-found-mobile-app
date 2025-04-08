@@ -57,6 +57,15 @@ import com.example.lostandfound.viewmodel.AuthState
 import com.example.lostandfound.viewmodel.LostAndFoundViewModel
 import com.example.lostandfound.viewmodel.ProfileUpdateState
 
+/**
+ * Main ProfileScreen composable that displays user information and provides profile management options.
+ * 
+ * modifier Optional modifier for the screen layout
+ * viewModel ViewModel instance for managing profile data and state
+ * onNavigateToHistory Callback for navigating to user's history
+ * onNavigateToSettings Callback for navigating to settings
+ * onLogout Callback for handling user logout
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileScreen(
@@ -66,6 +75,7 @@ fun ProfileScreen(
     onNavigateToSettings: () -> Unit,
     onLogout: () -> Unit
 ) {
+    // Collect state from ViewModel
     val authState by viewModel.authState.collectAsState()
     val userEmail = if (authState is AuthState.Authenticated) {
         (authState as AuthState.Authenticated).user.email ?: "No email"
@@ -77,6 +87,7 @@ fun ProfileScreen(
     val userPhone by viewModel.userPhone.collectAsState()
     val profileUpdateState by viewModel.profileUpdateState.collectAsState()
     
+    // State for edit dialog and form fields
     var showEditDialog by remember { mutableStateOf(false) }
     var editedName by remember { mutableStateOf("") }
     var editedPhone by remember { mutableStateOf("") }
@@ -97,12 +108,13 @@ fun ProfileScreen(
         }
     }
 
+    // Main content column
     Column(
         modifier = modifier
             .fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Profile Header
+        // Profile Header Section with user information
         Surface(
             modifier = Modifier.fillMaxWidth(),
             color = Color(0xFFF5F5F5),
@@ -114,7 +126,7 @@ fun ProfileScreen(
                     .padding(24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Profile Picture
+                // Profile Picture with placeholder icon
                 Surface(
                     modifier = Modifier
                         .size(80.dp)
@@ -131,7 +143,7 @@ fun ProfileScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // User Name
+                // Display user name if available
                 if (userName.isNotEmpty()) {
                     Text(
                         text = userName,
@@ -143,7 +155,7 @@ fun ProfileScreen(
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // User Email
+                // Display user email
                 Text(
                     text = userEmail,
                     style = MaterialTheme.typography.titleMedium,
@@ -151,7 +163,7 @@ fun ProfileScreen(
                     textAlign = TextAlign.Center
                 )
                 
-                // User Phone
+                // Display user phone if available
                 if (userPhone.isNotEmpty()) {
                     Text(
                         text = userPhone,
@@ -180,24 +192,25 @@ fun ProfileScreen(
             }
         }
 
-        // Menu Items
+        // Menu Items Section with settings and logout options
         Column(
             modifier = Modifier.fillMaxWidth()
         ) {
-            // Settings option (replacing My Posts)
+            // Settings menu item
             ProfileMenuItem(
                 icon = Icons.Default.Settings,
                 title = "Settings",
                 onClick = onNavigateToSettings
             )
             
+            // Divider between menu items
             HorizontalDivider(
                 modifier = Modifier.padding(start = 56.dp),
                 thickness = 1.dp,
                 color = Color.LightGray.copy(alpha = 0.5f)
             )
             
-            // Logout
+            // Logout menu item
             ProfileMenuItem(
                 icon = Icons.AutoMirrored.Filled.ExitToApp,
                 title = "Logout",
@@ -206,6 +219,7 @@ fun ProfileScreen(
         }
     }
     
+    // Edit Profile Dialog
     if (showEditDialog) {
         AlertDialog(
             onDismissRequest = { 
@@ -225,7 +239,7 @@ fun ProfileScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                 ) {
-                    // Name field
+                    // Name input field
                     Text(
                         text = "Name",
                         style = MaterialTheme.typography.bodyMedium,
@@ -257,7 +271,7 @@ fun ProfileScreen(
                     
                     Spacer(modifier = Modifier.height(16.dp))
                     
-                    // Phone field
+                    // Phone input field
                     Text(
                         text = "Phone Number",
                         style = MaterialTheme.typography.bodyMedium,
@@ -287,7 +301,7 @@ fun ProfileScreen(
                         )
                     }
                     
-                    // Show error if there is one
+                    // Error message display
                     if (profileUpdateState is ProfileUpdateState.Error) {
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
@@ -301,6 +315,7 @@ fun ProfileScreen(
             containerColor = Color.White,
             shape = RoundedCornerShape(0.dp),
             confirmButton = {
+                // Save button with loading state
                 Button(
                     onClick = {
                         viewModel.updateUserProfile(editedName, editedPhone)
@@ -327,6 +342,7 @@ fun ProfileScreen(
                 }
             },
             dismissButton = {
+                // Cancel button
                 TextButton(
                     onClick = { showEditDialog = false },
                     enabled = profileUpdateState !is ProfileUpdateState.Loading,
@@ -342,6 +358,13 @@ fun ProfileScreen(
     }
 }
 
+/**
+ * Reusable menu item component for the profile screen.
+ * 
+ * icon The icon to display
+ * title The text to display
+ * onClick Callback when the item is clicked
+ */
 @Composable
 private fun ProfileMenuItem(
     icon: androidx.compose.ui.graphics.vector.ImageVector,

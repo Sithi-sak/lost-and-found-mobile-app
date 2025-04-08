@@ -1,5 +1,6 @@
 package com.example.lostandfound.viewmodel
 
+// Import necessary Android and Firebase components for ViewModel functionality
 import android.net.Uri
 import android.util.Log
 import androidx.lifecycle.ViewModel
@@ -20,23 +21,27 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.io.InputStream
 
+/**
+ * Main ViewModel class that manages the application's data and business logic.
+ * Handles authentication, item management, chat functionality, and user preferences.
+ */
 class LostAndFoundViewModel : ViewModel() {
     
+    // Firebase manager instance for handling all Firebase operations
     private val firebaseManager = FirebaseManager()
     
-    // Auth state
+    // Authentication state management
     private val _authState = MutableStateFlow<AuthState>(AuthState.Unauthenticated)
     val authState: StateFlow<AuthState> = _authState.asStateFlow()
     
-    // User phone number state
+    // User profile information states
     private val _userPhone = MutableStateFlow("")
     val userPhone: StateFlow<String> = _userPhone.asStateFlow()
     
-    // User name state
     private val _userName = MutableStateFlow("")
     val userName: StateFlow<String> = _userName.asStateFlow()
     
-    // Theme state
+    // Theme preference state
     private val _themeState = MutableStateFlow<ThemeState>(ThemeState.LIGHT)
     val themeState: StateFlow<ThemeState> = _themeState.asStateFlow()
     
@@ -44,11 +49,11 @@ class LostAndFoundViewModel : ViewModel() {
     private val _profileUpdateState = MutableStateFlow<ProfileUpdateState>(ProfileUpdateState.Idle)
     val profileUpdateState: StateFlow<ProfileUpdateState> = _profileUpdateState.asStateFlow()
     
-    // Form state
+    // Form submission state
     private val _formState = MutableStateFlow<FormState>(FormState.Idle)
     val formState: StateFlow<FormState> = _formState.asStateFlow()
     
-    // Detail state for individual item
+    // Item detail view state
     private val _detailState = MutableStateFlow<DetailState>(DetailState.Idle)
     val detailState: StateFlow<DetailState> = _detailState.asStateFlow()
     
@@ -56,7 +61,7 @@ class LostAndFoundViewModel : ViewModel() {
     private val _imageUploadState = MutableStateFlow<ImageUploadState>(ImageUploadState.Idle)
     val imageUploadState: StateFlow<ImageUploadState> = _imageUploadState.asStateFlow()
     
-    // Chat-related state
+    // Chat functionality states
     private val _chatState = MutableStateFlow<ChatState>(ChatState.Loading)
     val chatState: StateFlow<ChatState> = _chatState.asStateFlow()
 
@@ -66,12 +71,15 @@ class LostAndFoundViewModel : ViewModel() {
     private val _messages = MutableStateFlow<List<Message>>(emptyList())
     val messages: StateFlow<List<Message>> = _messages.asStateFlow()
     
+    // Post creation state
     private val _postState = MutableStateFlow<PostState>(PostState.Initial)
     val postState: StateFlow<PostState> = _postState.asStateFlow()
 
+    // Image selection state
     private val _imageState = MutableStateFlow<ImageState>(ImageState.NoImage)
     val imageState: StateFlow<ImageState> = _imageState.asStateFlow()
     
+    // Lost items list and pagination states
     private val _items = MutableStateFlow<List<LostItem>>(emptyList())
     val items = _items.asStateFlow()
 
@@ -87,9 +95,11 @@ class LostAndFoundViewModel : ViewModel() {
     private val _totalPages = MutableStateFlow(1)
     val totalPages = _totalPages.asStateFlow()
 
+    // Pagination configuration
     private val pageSize = 5
     private var totalItems = 0
     
+    // Initialize ViewModel with necessary data
     init {
         checkAuthState()
         viewModelScope.launch {
@@ -104,6 +114,7 @@ class LostAndFoundViewModel : ViewModel() {
         }
     }
     
+    // Fetch user's phone number from Firebase
     private fun fetchUserPhone() {
         viewModelScope.launch {
             try {
@@ -114,6 +125,7 @@ class LostAndFoundViewModel : ViewModel() {
         }
     }
     
+    // Fetch user's name from Firebase
     private fun fetchUserName() {
         viewModelScope.launch {
             try {
@@ -124,6 +136,7 @@ class LostAndFoundViewModel : ViewModel() {
         }
     }
     
+    // Check and update authentication state
     private fun checkAuthState() {
         val currentUser = firebaseManager.getCurrentUser()
         if (currentUser != null) {
@@ -135,6 +148,7 @@ class LostAndFoundViewModel : ViewModel() {
         }
     }
     
+    // Fetch a specific lost item by ID
     fun fetchLostItemById(itemId: String) {
         _detailState.value = DetailState.Loading
         viewModelScope.launch {
@@ -150,6 +164,7 @@ class LostAndFoundViewModel : ViewModel() {
         }
     }
     
+    // Handle user sign in
     fun signIn(email: String, password: String) {
         _authState.value = AuthState.Loading
         viewModelScope.launch {
@@ -168,6 +183,7 @@ class LostAndFoundViewModel : ViewModel() {
         }
     }
     
+    // Handle user registration
     fun signUp(email: String, username: String, phoneNumber: String, password: String) {
         _authState.value = AuthState.Loading
         viewModelScope.launch {
@@ -186,6 +202,7 @@ class LostAndFoundViewModel : ViewModel() {
         }
     }
     
+    // Handle user sign out
     fun signOut() {
         firebaseManager.signOut()
         _authState.value = AuthState.Unauthenticated
@@ -194,6 +211,7 @@ class LostAndFoundViewModel : ViewModel() {
         _userPhone.value = ""
     }
     
+    // Upload image to Firebase Storage
     fun uploadImage(imageUri: Uri) {
         _imageUploadState.value = ImageUploadState.Loading
         viewModelScope.launch {
@@ -209,6 +227,7 @@ class LostAndFoundViewModel : ViewModel() {
         }
     }
     
+    // Create a new lost item
     fun createLostItem(
         title: String,
         description: String,
@@ -233,16 +252,19 @@ class LostAndFoundViewModel : ViewModel() {
         }
     }
     
+    // Delete a lost item
     fun deleteLostItem(itemId: String) {
         viewModelScope.launch {
             firebaseManager.deleteLostItem(itemId)
         }
     }
     
+    // Get all lost items
     fun getAllLostItems(): Flow<List<LostItem>> {
         return firebaseManager.getLostItems()
     }
     
+    // Get lost items posted by the current user
     fun getUserLostItems(): Flow<List<LostItem>> {
         return try {
             // Verify we have a valid user before attempting to get items
@@ -262,18 +284,22 @@ class LostAndFoundViewModel : ViewModel() {
         }
     }
     
+    // Reset form state
     fun resetFormState() {
         _formState.value = FormState.Idle
     }
     
+    // Reset image upload state
     fun resetImageUploadState() {
         _imageUploadState.value = ImageUploadState.Idle
     }
     
+    // Reset detail view state
     fun resetDetailState() {
         _detailState.value = DetailState.Idle
     }
 
+    // Get all chats for the current user
     fun getChats() {
         viewModelScope.launch {
             try {
@@ -291,6 +317,7 @@ class LostAndFoundViewModel : ViewModel() {
         }
     }
 
+    // Get messages for a specific chat
     fun getChatMessages(chatId: String) {
         viewModelScope.launch {
             try {
@@ -307,6 +334,7 @@ class LostAndFoundViewModel : ViewModel() {
         }
     }
 
+    // Send a message in a chat
     fun sendMessage(chatId: String, content: String) {
         viewModelScope.launch {
             try {
@@ -320,6 +348,7 @@ class LostAndFoundViewModel : ViewModel() {
         }
     }
 
+    // Create a new chat or open an existing one
     fun createOrOpenChat(otherUserId: String, itemId: String, onChatCreated: (String) -> Unit) {
         viewModelScope.launch {
             try {
@@ -338,6 +367,7 @@ class LostAndFoundViewModel : ViewModel() {
         }
     }
 
+    // Handle image selection and conversion to Base64
     fun handleImageSelection(inputStream: InputStream) {
         viewModelScope.launch {
             _imageState.value = ImageState.Loading
@@ -357,14 +387,17 @@ class LostAndFoundViewModel : ViewModel() {
         }
     }
 
+    // Reset image state
     fun resetImageState() {
         _imageState.value = ImageState.NoImage
     }
 
+    // Reset post creation state
     fun resetPostState() {
         _postState.value = PostState.Initial
     }
 
+    // Load more items for pagination
     fun loadMoreItems() {
         viewModelScope.launch {
             _isLoading.value = true
@@ -385,6 +418,7 @@ class LostAndFoundViewModel : ViewModel() {
         }
     }
 
+    // Navigate to next page
     fun nextPage() {
         if (_currentPage.value < _totalPages.value) {
             _currentPage.value += 1
@@ -392,6 +426,7 @@ class LostAndFoundViewModel : ViewModel() {
         }
     }
 
+    // Navigate to previous page
     fun previousPage() {
         if (_currentPage.value > 1) {
             _currentPage.value -= 1
@@ -399,6 +434,7 @@ class LostAndFoundViewModel : ViewModel() {
         }
     }
 
+    // Refresh items list
     fun refreshItems() {
         viewModelScope.launch {
             _isLoading.value = true
@@ -415,6 +451,7 @@ class LostAndFoundViewModel : ViewModel() {
         }
     }
 
+    // Update item status (e.g., found/lost)
     fun updateItemStatus(itemId: String, newStatus: ItemStatus) {
         viewModelScope.launch {
             // Get the current item
@@ -448,6 +485,7 @@ class LostAndFoundViewModel : ViewModel() {
         }
     }
 
+    // Update user profile information
     fun updateUserProfile(username: String, phoneNumber: String) {
         viewModelScope.launch {
             _profileUpdateState.value = ProfileUpdateState.Loading
@@ -470,15 +508,18 @@ class LostAndFoundViewModel : ViewModel() {
         }
     }
     
+    // Reset profile update state
     fun resetProfileUpdateState() {
         _profileUpdateState.value = ProfileUpdateState.Idle
     }
 
+    // Toggle between light and dark theme
     fun toggleTheme() {
         _themeState.value = if (_themeState.value == ThemeState.LIGHT) ThemeState.DARK else ThemeState.LIGHT
     }
 }
 
+// Authentication state sealed class
 sealed class AuthState {
     object Unauthenticated : AuthState()
     object Loading : AuthState()
@@ -486,6 +527,7 @@ sealed class AuthState {
     data class Error(val message: String) : AuthState()
 }
 
+// Form submission state sealed class
 sealed class FormState {
     object Idle : FormState()
     object Loading : FormState()
@@ -493,6 +535,7 @@ sealed class FormState {
     data class Error(val message: String) : FormState()
 }
 
+// Item detail view state sealed class
 sealed class DetailState {
     object Idle : DetailState()
     object Loading : DetailState()
@@ -500,6 +543,7 @@ sealed class DetailState {
     data class Error(val message: String) : DetailState()
 }
 
+// Image upload state sealed class
 sealed class ImageUploadState {
     object Idle : ImageUploadState()
     object Loading : ImageUploadState()
@@ -507,12 +551,14 @@ sealed class ImageUploadState {
     data class Error(val message: String) : ImageUploadState()
 }
 
+// Chat state sealed class
 sealed class ChatState {
     object Loading : ChatState()
     object Success : ChatState()
     data class Error(val message: String) : ChatState()
 }
 
+// Image selection state sealed class
 sealed class ImageState {
     object NoImage : ImageState()
     object Loading : ImageState()
@@ -520,6 +566,7 @@ sealed class ImageState {
     data class Error(val message: String) : ImageState()
 }
 
+// Post creation state sealed class
 sealed class PostState {
     data object Initial : PostState()
     data object Loading : PostState()
@@ -527,6 +574,7 @@ sealed class PostState {
     data class Error(val message: String) : PostState()
 }
 
+// Profile update state sealed class
 sealed class ProfileUpdateState {
     object Idle : ProfileUpdateState()
     object Loading : ProfileUpdateState()
@@ -534,6 +582,7 @@ sealed class ProfileUpdateState {
     data class Error(val message: String) : ProfileUpdateState()
 }
 
+// Theme state sealed class
 sealed class ThemeState {
     object LIGHT : ThemeState()
     object DARK : ThemeState()

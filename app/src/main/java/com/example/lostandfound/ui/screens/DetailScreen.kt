@@ -1,5 +1,6 @@
 package com.example.lostandfound.ui.screens
 
+// Import necessary Android and Compose components for detail screen functionality
 import android.content.Intent
 import android.graphics.BitmapFactory
 import android.net.Uri
@@ -71,6 +72,16 @@ import com.example.lostandfound.ui.theme.DarkGray
 import com.example.lostandfound.ui.theme.LightGray
 import com.example.lostandfound.ui.theme.Shapes
 
+/**
+ * DetailScreen composable that displays detailed information about a lost item.
+ * Shows item details, image, status, and provides actions for the user.
+ *
+ * itemId The unique identifier of the lost item
+ * viewModel The ViewModel that manages item data and state
+ * onNavigateBack Callback for navigating back
+ * onDeleteSuccess Callback for successful item deletion
+ * onNavigateToChat Callback for navigating to chat
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DetailScreen(
@@ -80,17 +91,20 @@ fun DetailScreen(
     onDeleteSuccess: () -> Unit,
     onNavigateToChat: (String) -> Unit
 ) {
+    // Get context and collect necessary states
     val context = LocalContext.current
     val authState by viewModel.authState.collectAsState()
     val detailState by viewModel.detailState.collectAsState()
     
-    // Fetch item details when the screen is first composed
+    // Fetch item details when screen is first composed
     LaunchedEffect(itemId) {
         viewModel.fetchLostItemById(itemId)
     }
     
+    // Main screen layout with Scaffold
     Scaffold(
         topBar = {
+            // Top app bar with dynamic title and actions
             TopAppBar(
                 title = {
                     when (detailState) {
@@ -98,6 +112,7 @@ fun DetailScreen(
                             val lostItem = (detailState as DetailState.Success).item
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text("Item Details")
+                                // Show numeric ID if available
                                 if (lostItem.numericId > 0) {
                                     Spacer(modifier = Modifier.width(8.dp))
                                     Text(
@@ -119,6 +134,7 @@ fun DetailScreen(
                     }
                 },
                 actions = {
+                    // Show delete button only for item owner
                     if (detailState is DetailState.Success) {
                         val lostItem = (detailState as DetailState.Success).item
                         val currentUserId = try {
@@ -143,17 +159,21 @@ fun DetailScreen(
             )
         }
     ) { padding ->
+        // Main content area
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding),
             contentAlignment = Alignment.Center
         ) {
+            // Handle different states
             when (detailState) {
                 is DetailState.Loading -> {
+                    // Show loading indicator
                     CircularProgressIndicator()
                 }
                 is DetailState.Error -> {
+                    // Show error message with retry option
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center
@@ -175,6 +195,7 @@ fun DetailScreen(
                     }
                 }
                 is DetailState.Success -> {
+                    // Show item details
                     val lostItem = (detailState as DetailState.Success).item
                     val currentUserId = try {
                         (authState as? AuthState.Authenticated)?.user?.uid
@@ -198,6 +219,15 @@ fun DetailScreen(
     }
 }
 
+/**
+ * ItemDetailContent composable that displays the content of a lost item.
+ * Shows title, image, status, description, location, and contact information.
+ *
+ * lostItem The lost item to display
+ * isUsersOwnItem Boolean indicating if the current user owns the item
+ * viewModel The ViewModel for managing item state
+ * onNavigateToChat Callback for navigating to chat
+ */
 @Composable
 private fun ItemDetailContent(
     lostItem: LostItem,
@@ -207,12 +237,14 @@ private fun ItemDetailContent(
 ) {
     val context = LocalContext.current
     
+    // Scrollable content column
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(16.dp)
             .verticalScroll(rememberScrollState())
     ) {
+        // Main item card
         Card(
             modifier = Modifier
                 .fillMaxWidth()
@@ -232,6 +264,7 @@ private fun ItemDetailContent(
                     .fillMaxWidth()
                     .padding(24.dp)
             ) {
+                // Item title
                 Text(
                     text = lostItem.title,
                     style = MaterialTheme.typography.headlineMedium,
@@ -240,6 +273,7 @@ private fun ItemDetailContent(
                 
                 Spacer(modifier = Modifier.height(8.dp))
                 
+                // Posted by and timestamp row
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -260,7 +294,7 @@ private fun ItemDetailContent(
 
                 Spacer(modifier = Modifier.height(16.dp))
                 
-                // Display image if available
+                // Display item image if available
                 if (lostItem.imageBase64.isNotEmpty()) {
                     val imageBytes = Base64.decode(lostItem.imageBase64, Base64.DEFAULT)
                     val bitmap = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
@@ -286,7 +320,7 @@ private fun ItemDetailContent(
                 
                 Spacer(modifier = Modifier.height(16.dp))
                 
-                // Status badge
+                // Status badge with toggle functionality for owner
                 Surface(
                     color = if (lostItem.status == ItemStatus.LOST) LostRed else FoundGreen,
                     shape = Shapes.extraSmall,
@@ -412,14 +446,16 @@ private fun ItemDetailContent(
             }
         }
         
+        // Action buttons for non-owners
         if (!isUsersOwnItem) {
             Spacer(modifier = Modifier.height(24.dp))
             
-            // Action buttons
+            // Call and Chat buttons
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
+                // Call button
                 Button(
                     onClick = {
                         val intent = Intent(Intent.ACTION_DIAL).apply {
@@ -455,6 +491,7 @@ private fun ItemDetailContent(
                     }
                 }
                 
+                // Chat button
                 Button(
                     onClick = {
                         viewModel.createOrOpenChat(
@@ -496,6 +533,13 @@ private fun ItemDetailContent(
     }
 }
 
+/**
+ * Helper function to format timestamps.
+ * Converts Unix timestamp to readable date and time format.
+ *
+ * timestamp The Unix timestamp to format
+ * return Formatted date string (e.g., "Jan 01, 2023 at 12:00 PM")
+ */
 private fun formatDate(timestamp: Long): String {
     val sdf = SimpleDateFormat("MMM dd, yyyy 'at' hh:mm a", Locale.getDefault())
     return sdf.format(Date(timestamp))

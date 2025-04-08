@@ -1,5 +1,6 @@
 package com.example.lostandfound.ui.screens
 
+// Import necessary Android and Compose components for chat list functionality
 import android.widget.Toast
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -23,6 +24,14 @@ import com.example.lostandfound.ui.theme.*
 import java.text.SimpleDateFormat
 import java.util.*
 
+/**
+ * ChatListScreen composable that displays a list of chat conversations.
+ * Shows loading, error, and empty states appropriately.
+ *
+ * modifier Optional modifier for the screen layout
+ * viewModel The ViewModel that manages chat state and data
+ * onNavigateToChat Callback function to navigate to a specific chat
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChatListScreen(
@@ -30,16 +39,17 @@ fun ChatListScreen(
     viewModel: LostAndFoundViewModel,
     onNavigateToChat: (String) -> Unit
 ) {
+    // Collect chat list and state from ViewModel
     val chats by viewModel.chats.collectAsState()
     val chatState by viewModel.chatState.collectAsState()
     val context = LocalContext.current
 
-    // Fetch chats when screen is first displayed
+    // Effect to load chats when screen is first displayed
     LaunchedEffect(Unit) {
         viewModel.getChats()
     }
 
-    // Show error messages if any
+    // Effect to handle chat errors
     LaunchedEffect(chatState) {
         if (chatState is ChatState.Error) {
             Toast.makeText(
@@ -50,8 +60,9 @@ fun ChatListScreen(
         }
     }
 
+    // Main screen layout
     Column(modifier = modifier.fillMaxSize()) {
-        // Header
+        // Top app bar with title
         TopAppBar(
             title = { Text("Chats") },
             colors = TopAppBarDefaults.topAppBarColors(
@@ -60,8 +71,10 @@ fun ChatListScreen(
             )
         )
 
+        // Handle different chat states
         when (chatState) {
             ChatState.Loading -> {
+                // Show loading indicator
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
@@ -70,6 +83,7 @@ fun ChatListScreen(
                 }
             }
             is ChatState.Error -> {
+                // Show error message
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -85,7 +99,7 @@ fun ChatListScreen(
             }
             else -> {
                 if (chats.isEmpty()) {
-                    // Empty state
+                    // Show empty state message
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
@@ -99,7 +113,7 @@ fun ChatListScreen(
                         )
                     }
                 } else {
-                    // Chat list
+                    // Display list of chats
                     LazyColumn(
                         modifier = Modifier.fillMaxWidth()
                             .padding(horizontal = 16.dp, vertical = 12.dp),
@@ -118,11 +132,19 @@ fun ChatListScreen(
     }
 }
 
+/**
+ * ChatListItem composable that displays a single chat preview.
+ * Shows the other user's name, last message, and timestamp.
+ *
+ * chat The chat data to display
+ * onClick Callback function when chat is clicked
+ */
 @Composable
 fun ChatListItem(
     chat: Chat,
     onClick: () -> Unit
 ) {
+    // Chat item surface with click handling
     Surface(
         modifier = Modifier
             .fillMaxWidth()
@@ -140,22 +162,26 @@ fun ChatListItem(
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 12.dp),
         ) {
+            // Row containing user name and timestamp
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
+                // Other user's name
                 Text(
                     text = chat.otherUserName ?: "User",
                     style = MaterialTheme.typography.titleMedium,
                     color = Color(0xFF212529)
                 )
+                // Last message timestamp
                 Text(
                     text = formatTimestamp(chat.lastMessageTimestamp),
                     style = MaterialTheme.typography.bodySmall,
                     color = TextGrey
                 )
             }
+            // Last message preview
             Text(
                 text = chat.lastMessage,
                 maxLines = 1,
@@ -167,6 +193,16 @@ fun ChatListItem(
     }
 }
 
+/**
+ * Helper function to format message timestamps.
+ * Shows different formats based on message age:
+ * - Less than 24 hours: HH:mm
+ * - Less than a week: Day of week (e.g., "Mon")
+ * - Older: MM/dd/yy
+ *
+ * timestamp The Unix timestamp to format
+ * Formatted time string based on message age
+ */
 private fun formatTimestamp(timestamp: Long): String {
     val now = System.currentTimeMillis()
     val diff = now - timestamp

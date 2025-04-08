@@ -1,5 +1,6 @@
 package com.example.lostandfound.ui.screens
 
+// Import necessary Android and Compose components for settings screen functionality
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -51,6 +52,15 @@ import com.example.lostandfound.ui.theme.Shapes
 import com.example.lostandfound.viewmodel.LostAndFoundViewModel
 import com.example.lostandfound.viewmodel.ThemeState
 
+/**
+ * SettingsScreen composable that displays app settings and preferences.
+ * Includes theme toggle, notifications settings, and about information.
+ *
+ * viewModel The ViewModel that manages app settings
+ * onNavigateBack Callback for navigation back
+ * onNavigateToHistory Callback for viewing user's posts
+ * onLogout Callback for user logout
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
@@ -59,11 +69,14 @@ fun SettingsScreen(
     onNavigateToHistory: () -> Unit,
     onLogout: () -> Unit
 ) {
+    // Collect theme state from ViewModel
     val themeState by viewModel.themeState.collectAsState()
     val isDarkMode = themeState == ThemeState.DARK
 
+    // Main screen layout with Scaffold
     Scaffold(
         topBar = {
+            // Top app bar with title and back button
             TopAppBar(
                 title = { 
                     Text(
@@ -87,6 +100,7 @@ fun SettingsScreen(
             )
         }
     ) { padding ->
+        // Scrollable content column
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -97,6 +111,7 @@ fun SettingsScreen(
             // Notifications Section
             SettingsHeader("Notifications")
             
+            // Push notifications settings item
             SettingsItem(
                 icon = Icons.Default.Notifications,
                 title = "Push notifications",
@@ -111,7 +126,7 @@ fun SettingsScreen(
             // Device Section
             SettingsHeader("Device")
             
-            // Appearance setting with toggle
+            // Appearance setting with theme toggle
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -119,7 +134,7 @@ fun SettingsScreen(
                     .padding(16.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Icon in a circle background
+                // Theme icon in a circle background
                 Box(
                     modifier = Modifier
                         .size(32.dp)
@@ -137,7 +152,7 @@ fun SettingsScreen(
                 
                 Spacer(modifier = Modifier.width(16.dp))
                 
-                // Text content
+                // Theme setting text content
                 Column(
                     modifier = Modifier.weight(1f)
                 ) {
@@ -154,7 +169,7 @@ fun SettingsScreen(
                     )
                 }
                 
-                // Toggle switch
+                // Theme toggle switch
                 Switch(
                     checked = isDarkMode,
                     onCheckedChange = { viewModel.toggleTheme() },
@@ -172,7 +187,7 @@ fun SettingsScreen(
             // About Section
             SettingsHeader("About")
             
-            // About item with circle background
+            // Open source licenses item
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -180,7 +195,7 @@ fun SettingsScreen(
                     .padding(16.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Icon in a circle background
+                // Info icon in a circle background
                 Box(
                     modifier = Modifier
                         .size(32.dp)
@@ -198,7 +213,7 @@ fun SettingsScreen(
                 
                 Spacer(modifier = Modifier.width(16.dp))
                 
-                // Text content
+                // About text content
                 Column(
                     modifier = Modifier.weight(1f)
                 ) {
@@ -213,6 +228,11 @@ fun SettingsScreen(
     }
 }
 
+/**
+ * SettingsHeader composable that displays a section header in the settings screen.
+ *
+ * title The text to display as the header
+ */
 @Composable
 private fun SettingsHeader(
     title: String
@@ -226,6 +246,14 @@ private fun SettingsHeader(
     )
 }
 
+/**
+ * SettingsItem composable that displays a single settings item with icon and text.
+ *
+ * icon The icon to display
+ * title The main text to display
+ * subtitle Optional subtitle text
+ * onClick Callback when the item is clicked
+ */
 @Composable
 private fun SettingsItem(
     icon: ImageVector,

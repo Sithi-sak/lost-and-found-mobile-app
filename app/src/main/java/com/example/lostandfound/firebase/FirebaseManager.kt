@@ -27,7 +27,15 @@ import java.io.ByteArrayOutputStream
 import java.io.InputStream
 import java.util.UUID
 
+/**
+ * Main Firebase services manager class that handles:
+ * - Authentication (sign up, sign in, sign out)
+ * - Firestore operations (CRUD for lost items, chats, messages)
+ * - Storage operations (image uploads)
+ * - User profile management
+ */
 class FirebaseManager {
+    // Initialize Firebase components
     private val auth = FirebaseAuth.getInstance()
     private val db = FirebaseFirestore.getInstance()
     private val storage = FirebaseStorage.getInstance().reference
@@ -35,6 +43,9 @@ class FirebaseManager {
     private val countersCollection = db.collection("counters")
     private val COUNTER_DOC_ID = "lost_items_counter"
     
+    /**
+     * Initialize FirebaseManager and verify database connection
+     */
     init {
         Log.d("FirebaseManager", "Initializing FirebaseManager")
         try {
@@ -52,6 +63,16 @@ class FirebaseManager {
     }
     
     // Authentication methods
+    
+    /**
+     * Creates a new user account and profile in Firestore
+     * 
+     * email User's email address
+     * username User's display name
+     * phoneNumber User's contact number
+     * password User's account password
+     * return Result containing FirebaseUser on success, Exception on failure
+     */
     suspend fun signUp(email: String, username: String, phoneNumber: String, password: String): Result<FirebaseUser> {
         return try {
             Log.d("FirebaseManager", "Starting signup process for email: $email with username: $username")
@@ -89,6 +110,13 @@ class FirebaseManager {
         }
     }
     
+    /**
+     * Signs in an existing user with email and password
+     *
+     * email User's email address
+     * password User's password
+     * Result containing FirebaseUser on success, Exception on failure
+     */
     suspend fun signIn(email: String, password: String): Result<FirebaseUser> {
         return try {
             val authResult = auth.signInWithEmailAndPassword(email, password).await()
@@ -99,13 +127,27 @@ class FirebaseManager {
         }
     }
     
+    /**
+     * Signs out the current user
+     */
     fun signOut() {
         auth.signOut()
     }
     
+    /**
+     * Gets the currently authenticated user or null if not authenticated
+     *
+     * Current FirebaseUser or null
+     */
     fun getCurrentUser(): FirebaseUser? = auth.currentUser
     
-    // Image upload method
+    /**
+     * Uploads an image to Firebase Storage from a URI
+     * Checks file size limit before uploading
+     *
+     * imageUri URI of the image to upload
+     * Result containing download URL on success, Exception on failure
+     */
     suspend fun uploadImage(imageUri: Uri): Result<String> {
         return try {
             val userId = getCurrentUser()?.uid ?: "anonymous"
@@ -133,7 +175,12 @@ class FirebaseManager {
         }
     }
     
-    // Get next numeric ID from counter document
+    /**
+     * Gets the next numeric ID from a counter document in Firestore
+     * Creates the counter document if it doesn't exist
+     *
+     * Next available numeric ID
+     */
     private suspend fun getNextNumericId(): Long {
         val counterDoc = countersCollection.document(COUNTER_DOC_ID)
         val counterSnapshot = counterDoc.get().await()
@@ -335,6 +382,12 @@ class FirebaseManager {
         }
     }
 
+    /**
+     * Gets a flow of all chats for the current user
+     * Updates automatically when database changes
+     *
+     * return Flow of Chat list that the current user participates in
+     */
     fun getChats(): Flow<List<Chat>> = callbackFlow {
         try {
             val currentUser = auth.currentUser ?: throw Exception("User not authenticated")
@@ -382,6 +435,13 @@ class FirebaseManager {
         }
     }
 
+    /**
+     * Gets a flow of messages for a specific chat
+     * Updates automatically when database changes
+     *
+     * param chatId ID of the chat to get messages for
+     * return Flow of Message list for the specified chat
+     */
     fun getChatMessages(chatId: String): Flow<List<Message>> = callbackFlow {
         Log.d("FirebaseManager", "Starting to listen for messages in chat: $chatId")
         
@@ -425,6 +485,14 @@ class FirebaseManager {
         }
     }
 
+    /**
+     * Sends a new message in a specific chat
+     * Also updates the chat document with the last message info
+     *
+     * param chatId ID of the chat to send the message in
+     * param content Text content of the message
+     * return Result indicating success or failure
+     */
     suspend fun sendMessage(chatId: String, content: String): Result<Unit> = withContext(Dispatchers.IO) {
         try {
             val currentUser = auth.currentUser ?: throw Exception("User not authenticated")
@@ -471,6 +539,13 @@ class FirebaseManager {
         }
     }
 
+    /**
+     * Creates a new chat or returns existing chat between users about a specific item
+     *
+     * param otherUserId ID of the other user to chat with
+     * param itemId ID of the lost item the chat is about
+     * return Result containing chat ID on success, Exception on failure
+     */
     suspend fun createOrOpenChat(otherUserId: String, itemId: String): Result<String> = withContext(Dispatchers.IO) {
         try {
             val currentUser = auth.currentUser ?: throw Exception("User not authenticated")
@@ -519,6 +594,13 @@ class FirebaseManager {
         }
     }
 
+    /**
+     * Converts an image InputStream to Base64 string
+     * Resizes the image to reduce size while maintaining aspect ratio
+     *
+     * inputStream InputStream of the image to convert
+     * return Result containing Base64 string on success, Exception on failure
+     */
     suspend fun convertImageToBase64(inputStream: InputStream): Result<String> {
         return try {
             // Read the input stream into a bitmap
@@ -562,7 +644,12 @@ class FirebaseManager {
         }
     }
 
-    // Get user data
+    /**
+     * Gets user data for a specific user ID
+     *
+     * userId ID of the user to get data for
+     * return Result containing User object on success, Exception on failure
+     */
     suspend fun getUserData(userId: String): Result<User> {
         return try {
             val userDoc = db.collection("users").document(userId).get().await()
@@ -582,7 +669,11 @@ class FirebaseManager {
         }
     }
 
-    // Get current user's phone number
+    /**
+     * Gets the phone number of the current user
+     *
+     * Phone number string or empty string if not found
+     */
     suspend fun getCurrentUserPhone(): String {
         val currentUser = getCurrentUser() ?: return ""
         return try {
@@ -594,7 +685,11 @@ class FirebaseManager {
         }
     }
 
-    // Get current user's username
+    /**
+     * Gets the username of the current user
+     *
+     * Username string or empty string if not found
+     */
     suspend fun getCurrentUsername(): String {
         val currentUser = getCurrentUser()
         
@@ -623,13 +718,23 @@ class FirebaseManager {
         }
     }
     
-    // Get current user data
+    /**
+     * Gets complete user data for the current user
+     *
+     * @return Result containing User object on success, Exception on failure
+     */
     suspend fun getCurrentUserData(): Result<User> {
         val currentUser = getCurrentUser() ?: return Result.failure(Exception("Not authenticated"))
         return getUserData(currentUser.uid)
     }
     
-    // Update user profile
+    /**
+     * Updates the current user's profile information
+     *
+     * @param username New username to set
+     * @param phoneNumber New phone number to set
+     * @return Result indicating success or failure
+     */
     suspend fun updateUserProfile(username: String, phoneNumber: String): Result<Unit> {
         val currentUser = getCurrentUser() ?: return Result.failure(Exception("Not authenticated"))
         return try {
@@ -647,6 +752,13 @@ class FirebaseManager {
         }
     }
 
+    /**
+     * Gets a paginated list of lost items
+     *
+     * startIndex Index to start from
+     * pageSize Number of items to fetch
+     * List of LostItem objects for the requested page
+     */
     suspend fun getLostItems(startIndex: Int, pageSize: Int): List<LostItem> {
         return try {
             val snapshot = db.collection("lost_items")
@@ -667,6 +779,11 @@ class FirebaseManager {
         }
     }
 
+    /**
+     * Gets the total count of lost items in the database
+     *
+     * Total number of items
+     */
     suspend fun getTotalItemCount(): Int {
         return try {
             val snapshot = db.collection("lost_items")
@@ -679,6 +796,13 @@ class FirebaseManager {
         }
     }
 
+    /**
+     * Updates the status of a lost item (LOST or FOUND)
+     *
+     * itemId ID of the item to update
+     * newStatus New status to set
+     * Exception if update fails
+     */
     suspend fun updateItemStatus(itemId: String, newStatus: ItemStatus) {
         try {
             db.collection("lost_items")
